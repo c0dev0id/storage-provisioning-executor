@@ -1,0 +1,56 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+[project]
+name = "storage-provisioning-executor"
+version = "0.1.0"
+description = "YAML-driven storage provisioning executor for Debian-based Linux"
+readme = "README.md"
+license = { text = "GPL-2.0-or-later" }
+requires-python = ">=3.11"
+dependencies = ["PyYAML>=6.0"]
+
+[project.scripts]
+sprov = "storage.main:main_cli"
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: marks tests that require real Linux block-device subsystems",
+]
+
+[tool.pylint.main]
+py-version = "3.11"
+
+[tool.pylint.messages_control]
+disable = [
+    "missing-module-docstring",
+    "missing-function-docstring",
+    "missing-class-docstring",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "too-many-instance-attributes",
+    "duplicate-code",
+]
+
+[tool.pylint.format]
+max-line-length = 100
+
+[tool.pylint.design]
+max-args = 8
+max-locals = 20
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "yaml"
+ignore_missing_imports = true
