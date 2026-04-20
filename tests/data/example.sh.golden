@@ -14,15 +14,21 @@ parted -s -a optimal /dev/sda -- mkpart EFI 2048s 4097MiB
 parted -s /dev/sda set 1 boot on
 parted -s /dev/sda set 1 esp on
 sgdisk --partition-guid=1:xyz /dev/sda
+# re-read partition table on /dev/sda
+partprobe /dev/sda || true
 
 # === part-boot (partition) ===
 # create partition 2 (boot) on /dev/sda
 parted -s -a optimal /dev/sda -- mkpart boot 4097MiB 8193MiB
 sgdisk --partition-guid=2:xzy /dev/sda
+# re-read partition table on /dev/sda
+partprobe /dev/sda || true
 
 # === part-lvm-pv (partition) ===
 # create partition 3 (lvm-pv) on /dev/sda
 parted -s -a optimal /dev/sda -- mkpart lvm-pv 8193MiB 33793MiB
+# re-read partition table on /dev/sda
+partprobe /dev/sda || true
 
 # === lvm-pv (lvm-pv) ===
 # create PV on /dev/sda3
@@ -65,6 +71,8 @@ parted -s /dev/disk/by-id/nvme_Vendor_device_Serial1 mklabel gpt
 # create partition 1 (part-ssd1) on /dev/disk/by-id/nvme_Vendor_device_Serial1
 parted -s -a optimal /dev/disk/by-id/nvme_Vendor_device_Serial1 -- mkpart part-ssd1 2048s 100%
 sgdisk --partition-guid=1:xyz /dev/disk/by-id/nvme_Vendor_device_Serial1
+# re-read partition table on /dev/disk/by-id/nvme_Vendor_device_Serial1
+partprobe /dev/disk/by-id/nvme_Vendor_device_Serial1 || true
 
 # === hw-ssd2 (hardware) ===
 # zero first 1024 MiB of /dev/disk/by-id/nvme_Vendor_device_Serial2
@@ -76,6 +84,8 @@ parted -s /dev/disk/by-id/nvme_Vendor_device_Serial2 mklabel gpt
 # create partition 1 (part-ssd2) on /dev/disk/by-id/nvme_Vendor_device_Serial2
 parted -s -a optimal /dev/disk/by-id/nvme_Vendor_device_Serial2 -- mkpart part-ssd2 2048s 100%
 sgdisk --partition-guid=1:xyz /dev/disk/by-id/nvme_Vendor_device_Serial2
+# re-read partition table on /dev/disk/by-id/nvme_Vendor_device_Serial2
+partprobe /dev/disk/by-id/nvme_Vendor_device_Serial2 || true
 
 # === nvme-softraid (raid1) ===
 # zero mdraid superblock on /dev/disk/by-id/nvme_Vendor_device_Serial1p1

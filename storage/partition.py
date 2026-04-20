@@ -110,6 +110,13 @@ class PartitionNode(Node):
                     ],
                 )
             )
+        lines.append(
+            ShellCommand(
+                argv=["partprobe", parent_path],
+                check=False,
+                comment=f"re-read partition table on {parent_path}",
+            )
+        )
         return lines
 
 
