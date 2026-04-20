@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+sprov
+doc/sprov.8
+
+# Debian packaging build detritus
+debian/.debhelper/
+debian/files
+debian/*.debhelper.log
+debian/*.substvars
+debian/debhelper-build-stamp
+debian/sprov/
+debian/sprov-udeb/
+debian/tmp/
+../sprov_*.deb
+../sprov-udeb_*.udeb
+../sprov_*.changes
+../sprov_*.buildinfo
+../sprov_*.tar.xz
+../sprov_*.dsc
+
+# Editor / OS
+*.swp
+*.swo
+*~
+.DS_Store
