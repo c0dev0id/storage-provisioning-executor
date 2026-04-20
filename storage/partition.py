@@ -117,7 +117,7 @@ class PartitionNode(Node):
             ShellCommand(
                 argv=[
                     "sh", "-c",
-                    f"partx -u {parent_path} 2>/dev/null; "
+                    f"partx -a -n {self._index}:{self._index} {parent_path} 2>/dev/null; "
                     f"udevadm settle 2>/dev/null; "
                     f"i=0; while [ $i -lt 50 ] && ! [ -f {sys_path} ]; "
                     f"do sleep 0.1; i=$((i+1)); done; "
