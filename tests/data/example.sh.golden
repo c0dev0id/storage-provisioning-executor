@@ -15,20 +15,20 @@ parted -s /dev/sda set 1 boot on
 parted -s /dev/sda set 1 esp on
 sgdisk --partition-guid=1:xyz /dev/sda
 # ensure /dev/sda1 is accessible
-sh -c 'partx -u /dev/sda 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/sda1/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/sda1/dev ]; then D=$(cat /sys/class/block/sda1/dev); rm -f /dev/sda1 2>/dev/null; mknod /dev/sda1 b "${D%:*}" "${D#*:}"; fi' || true
+sh -c 'partx -u /dev/sda 2>/dev/null; udevadm settle 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/sda1/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/sda1/dev ] && ! [ -b /dev/sda1 ]; then D=$(cat /sys/class/block/sda1/dev); rm -f /dev/sda1 2>/dev/null; mknod /dev/sda1 b "${D%:*}" "${D#*:}"; fi' || true
 
 # === part-boot (partition) ===
 # create partition 2 (boot) on /dev/sda
 parted -s -a optimal /dev/sda -- mkpart boot 4097MiB 8193MiB
 sgdisk --partition-guid=2:xzy /dev/sda
 # ensure /dev/sda2 is accessible
-sh -c 'partx -u /dev/sda 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/sda2/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/sda2/dev ]; then D=$(cat /sys/class/block/sda2/dev); rm -f /dev/sda2 2>/dev/null; mknod /dev/sda2 b "${D%:*}" "${D#*:}"; fi' || true
+sh -c 'partx -u /dev/sda 2>/dev/null; udevadm settle 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/sda2/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/sda2/dev ] && ! [ -b /dev/sda2 ]; then D=$(cat /sys/class/block/sda2/dev); rm -f /dev/sda2 2>/dev/null; mknod /dev/sda2 b "${D%:*}" "${D#*:}"; fi' || true
 
 # === part-lvm-pv (partition) ===
 # create partition 3 (lvm-pv) on /dev/sda
 parted -s -a optimal /dev/sda -- mkpart lvm-pv 8193MiB 33793MiB
 # ensure /dev/sda3 is accessible
-sh -c 'partx -u /dev/sda 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/sda3/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/sda3/dev ]; then D=$(cat /sys/class/block/sda3/dev); rm -f /dev/sda3 2>/dev/null; mknod /dev/sda3 b "${D%:*}" "${D#*:}"; fi' || true
+sh -c 'partx -u /dev/sda 2>/dev/null; udevadm settle 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/sda3/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/sda3/dev ] && ! [ -b /dev/sda3 ]; then D=$(cat /sys/class/block/sda3/dev); rm -f /dev/sda3 2>/dev/null; mknod /dev/sda3 b "${D%:*}" "${D#*:}"; fi' || true
 
 # === lvm-pv (lvm-pv) ===
 # create PV on /dev/sda3
@@ -76,7 +76,7 @@ parted -s /dev/disk/by-id/nvme_Vendor_device_Serial1 mklabel gpt
 parted -s -a optimal /dev/disk/by-id/nvme_Vendor_device_Serial1 -- mkpart part-ssd1 2048s 100%
 sgdisk --partition-guid=1:xyz /dev/disk/by-id/nvme_Vendor_device_Serial1
 # ensure /dev/disk/by-id/nvme_Vendor_device_Serial1p1 is accessible
-sh -c 'partx -u /dev/disk/by-id/nvme_Vendor_device_Serial1 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/nvme_Vendor_device_Serial1p1/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/nvme_Vendor_device_Serial1p1/dev ]; then D=$(cat /sys/class/block/nvme_Vendor_device_Serial1p1/dev); rm -f /dev/disk/by-id/nvme_Vendor_device_Serial1p1 2>/dev/null; mknod /dev/disk/by-id/nvme_Vendor_device_Serial1p1 b "${D%:*}" "${D#*:}"; fi' || true
+sh -c 'partx -u /dev/disk/by-id/nvme_Vendor_device_Serial1 2>/dev/null; udevadm settle 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/nvme_Vendor_device_Serial1p1/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/nvme_Vendor_device_Serial1p1/dev ] && ! [ -b /dev/disk/by-id/nvme_Vendor_device_Serial1p1 ]; then D=$(cat /sys/class/block/nvme_Vendor_device_Serial1p1/dev); rm -f /dev/disk/by-id/nvme_Vendor_device_Serial1p1 2>/dev/null; mknod /dev/disk/by-id/nvme_Vendor_device_Serial1p1 b "${D%:*}" "${D#*:}"; fi' || true
 
 # === hw-ssd2 (hardware) ===
 # zero first 1024 MiB of /dev/disk/by-id/nvme_Vendor_device_Serial2
@@ -89,7 +89,7 @@ parted -s /dev/disk/by-id/nvme_Vendor_device_Serial2 mklabel gpt
 parted -s -a optimal /dev/disk/by-id/nvme_Vendor_device_Serial2 -- mkpart part-ssd2 2048s 100%
 sgdisk --partition-guid=1:xyz /dev/disk/by-id/nvme_Vendor_device_Serial2
 # ensure /dev/disk/by-id/nvme_Vendor_device_Serial2p1 is accessible
-sh -c 'partx -u /dev/disk/by-id/nvme_Vendor_device_Serial2 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/nvme_Vendor_device_Serial2p1/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/nvme_Vendor_device_Serial2p1/dev ]; then D=$(cat /sys/class/block/nvme_Vendor_device_Serial2p1/dev); rm -f /dev/disk/by-id/nvme_Vendor_device_Serial2p1 2>/dev/null; mknod /dev/disk/by-id/nvme_Vendor_device_Serial2p1 b "${D%:*}" "${D#*:}"; fi' || true
+sh -c 'partx -u /dev/disk/by-id/nvme_Vendor_device_Serial2 2>/dev/null; udevadm settle 2>/dev/null; i=0; while [ $i -lt 50 ] && ! [ -f /sys/class/block/nvme_Vendor_device_Serial2p1/dev ]; do sleep 0.1; i=$((i+1)); done; if [ -f /sys/class/block/nvme_Vendor_device_Serial2p1/dev ] && ! [ -b /dev/disk/by-id/nvme_Vendor_device_Serial2p1 ]; then D=$(cat /sys/class/block/nvme_Vendor_device_Serial2p1/dev); rm -f /dev/disk/by-id/nvme_Vendor_device_Serial2p1 2>/dev/null; mknod /dev/disk/by-id/nvme_Vendor_device_Serial2p1 b "${D%:*}" "${D#*:}"; fi' || true
 
 # === nvme-softraid (raid1) ===
 # zero mdraid superblock on /dev/disk/by-id/nvme_Vendor_device_Serial1p1
