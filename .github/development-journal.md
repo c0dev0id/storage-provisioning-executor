@@ -42,7 +42,13 @@
 9. **Two Debian binary packages, one source.**
    `sprov` carries man page and full deps; `sprov-udeb` strips docs/changelog/compress via `-psprov`-scoped overrides in `debian/rules` and depends on `-udeb` counterparts for debian-installer. Both from a single `3.0 (native)` source.
 
-10. **`gmake` on OpenBSD unlocks GNU Make idioms.**
+10. **`partx -a -n N:N` not `partx -u` for adding new partitions in containers.**
+    `partx -u` issues `BLKPG_UPD_PARTITION` for *all* existing partitions plus the new one. udevd converts each UPD event into a "change" event that temporarily removes then recreates the partition's device node while re-evaluating udev rules. Any concurrent `mkfs` or `pvcreate` on one of those partitions can therefore see `ENXIO`. `partx -a -n N:N` sends a single `BLKPG_ADD_PARTITION` for only partition N — no churn on existing nodes. This matters in Docker `--privileged` containers because the container runs its own udevd against its own devtmpfs (isolated from the host `/dev`), so all device nodes must be managed explicitly; there is no host udevd to fall back on.
+
+11. **LVM: create inactive (`-an`), then activate, then make nodes.**
+    `lvcreate` without `-an` activates the LV immediately and tries to zero the new DM device. In a privileged container this sometimes fails with "device not cleared" because the DM target appears before udev has set up the device node, leading to a zero-write on a phantom device. The fix is: `lvcreate -an` (no activation, no device access), then `lvchange -ay` (explicit activation), then `vgmknodes` (create `/dev/VG/LV` nodes). The three-step sequence is deterministic and avoids the race entirely.
+
+12. **`gmake` on OpenBSD unlocks GNU Make idioms.**
     Suffix-rule automatic variables like `$<` and `$(wildcard)` are GNU-only under BSD make but the project is built on Debian where `/usr/bin/make` is GNU. Using `gmake` on the dev box keeps the Makefile portable without a second dialect.
 
 ## Core Features

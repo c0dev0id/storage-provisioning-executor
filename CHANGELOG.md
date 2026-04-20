@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-04-20
+
+### Fixed
+- Partition device-node creation now uses `partx -a -n N:N` instead of
+  `partx -u`. The previous form sent `BLKPG_UPD_PARTITION` events for every
+  existing partition each time a new one was added, causing udevd to transiently
+  remove and recreate nodes for those partitions. A concurrent `mkfs` could see
+  `ENXIO` during this window. The new form sends a single `ADD` event only for
+  the newly created partition, leaving existing nodes untouched.
+- LVM logical volume creation now uses `lvcreate -an` (inactive, no device
+  activation at create time) followed by `lvchange -ay` and `vgmknodes` instead
+  of attempting to activate during `lvcreate`. This avoids "device not cleared"
+  errors in container environments where the DM zeroing path races with udev.
+- Loop-device images in integration test fixtures enlarged (128–256 MiB →
+  512 MiB) so XFS filesystems (which require ≥ 300 MB) can be created on
+  partitions within them.
+- Partition device nodes from a previous test are now cleaned up in the
+  integration-test fixture's teardown, preventing stale nodes from silently
+  satisfying the `[ -b /dev/loopNpM ]` guard in a subsequent test.
+
 ## [0.1.0] - 2026-04-20
 
 ### Added
