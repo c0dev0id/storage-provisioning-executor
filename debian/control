@@ -29,7 +29,6 @@ Depends:
  e2fsprogs,
  dosfstools,
  xfsprogs,
- util-linux,
  gdisk
 Provides: storage-provisioner
 Description: declarative storage provisioning executor (YAML-driven)

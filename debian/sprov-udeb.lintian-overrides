@@ -1,0 +1,4 @@
+# python3-minimal-udeb provides /usr/bin/python3 in the d-i environment but
+# does not carry the python3:any virtual package that lintian checks for.
+sprov-udeb: python-package-missing-depends-on-python
+sprov-udeb: python3-script-but-no-python3-dep
