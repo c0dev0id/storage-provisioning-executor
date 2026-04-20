@@ -23,7 +23,9 @@ def test_pv_validate_requires_one_parent() -> None:
 def test_pv_command_lines_calls_pvcreate() -> None:
     pv = LvmPvNode({"id": "pv", "parents": "hw"}, Context())
     pv._resolved_parents = [_hw("/dev/sda3")]
-    assert pv.command_lines() == [["pvcreate", "-ff", "-y", "/dev/sda3"]]
+    assert [c.argv for c in pv.command_lines()] == [
+        ["pvcreate", "-ff", "-y", "/dev/sda3"],
+    ]
 
 
 def test_pv_device_path_is_parent_device() -> None:
@@ -43,7 +45,7 @@ def test_vg_command_lines_single_pv() -> None:
     pv = LvmPvNode({"id": "pv1", "parents": "hw"}, Context())
     pv._resolved_parents = [_hw("/dev/sda3")]
     vg._resolved_parents = [pv]
-    assert vg.command_lines() == [
+    assert [c.argv for c in vg.command_lines()] == [
         ["vgcreate", "-f", "-y", "vg", "/dev/sda3"],
     ]
 
@@ -55,7 +57,7 @@ def test_vg_command_lines_multiple_pvs() -> None:
     pv2 = LvmPvNode({"id": "pv2", "parents": "hwB"}, Context())
     pv2._resolved_parents = [_hw("/dev/sdb3")]
     vg._resolved_parents = [pv1, pv2]
-    assert vg.command_lines() == [
+    assert [c.argv for c in vg.command_lines()] == [
         ["vgcreate", "-f", "-y", "vg", "/dev/sda3", "/dev/sdb3"],
     ]
 
@@ -100,7 +102,7 @@ def test_lv_command_lines_fixed_size() -> None:
     )
     vg = LvmVgNode({"id": "vg-host", "parents": "pv"}, Context())
     lv._resolved_parents = [vg]
-    lines = lv.command_lines()
+    lines = [c.argv for c in lv.command_lines()]
     assert lines == [
         ["lvcreate", "-y", "-W", "y", "-L", f"{8 * 1024**3}B", "-n", "c_root", "vg-host"],
     ]
@@ -112,7 +114,7 @@ def test_lv_command_lines_max_size() -> None:
     )
     vg = LvmVgNode({"id": "vg-host", "parents": "pv"}, Context())
     lv._resolved_parents = [vg]
-    lines = lv.command_lines()
+    lines = [c.argv for c in lv.command_lines()]
     assert lines == [
         ["lvcreate", "-y", "-W", "y", "-l", "100%FREE", "-n", "full", "vg-host"],
     ]

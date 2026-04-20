@@ -9,6 +9,23 @@ from typing import Any, Callable, ClassVar
 from storage.system import SystemCommand
 
 
+@dataclass
+class ShellCommand:
+    """Canonical representation of a single shell operation.
+
+    Both the live executor and the script generator consume this type, so
+    generated shell scripts match what the Python path runs. `stdin` bytes
+    are fed on stdin (never passed on the command line) to keep secrets
+    out of /proc/<pid>/cmdline. `comment` is an optional note the script
+    generator emits as a leading comment line.
+    """
+
+    argv: list[str]
+    stdin: bytes | None = None
+    comment: str | None = None
+    check: bool = True
+
+
 class NodeValidationError(ValueError):
     """Raised when a node's YAML fields are invalid."""
 
@@ -80,12 +97,11 @@ class Node:
         """Return the block device path this node produces, or None."""
         return None
 
-    def command_lines(self) -> list[list[str]]:
-        """Return argv lists that produce this node's effect.
+    def command_lines(self) -> list[ShellCommand]:
+        """Return ShellCommand records that produce this node's effect.
 
-        Shared between Executor (for logging/dry-run parity) and ScriptGenerator
-        (for shell emission). Subclasses that need runtime-derived state may
-        override execute() directly and return [] here.
+        Shared between Executor and ScriptGenerator. Subclasses that need
+        runtime-derived state may override execute() directly and return [].
         """
         return []
 

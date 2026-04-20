@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from storage.base import Context, Node, NodeValidationError
+from storage.base import Context, Node, NodeValidationError, ShellCommand
 from storage.system import SIZE_MAX, parse_size
 
 
@@ -54,14 +54,14 @@ class HardwareNode(Node):
             )
 
     def execute(self) -> None:
-        for argv in self.command_lines():
-            self.ctx.sys.run(argv, check=False)
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
 
     def device_path(self) -> str:
         return self.path
 
-    def command_lines(self) -> list[list[str]]:
-        lines: list[list[str]] = []
+    def command_lines(self) -> list[ShellCommand]:
+        lines: list[ShellCommand] = []
         if self.erase is not None:
             if self.erase.lower() == "all":
                 lines.append(_dd_zero_all(self.path))
@@ -72,29 +72,41 @@ class HardwareNode(Node):
                 else:
                     lines.append(_dd_zero_prefix(self.path, int(byte_count)))
         if self.overwrite == "yes":
-            lines.append(["parted", "-s", self.path, "mklabel", str(self.label)])
+            lines.append(
+                ShellCommand(
+                    argv=["parted", "-s", self.path, "mklabel", str(self.label)],
+                    comment=f"create {self.label} partition table on {self.path}",
+                )
+            )
         return lines
 
 
-def _dd_zero_all(path: str) -> list[str]:
-    return [
-        "sh",
-        "-c",
-        f"dd if=/dev/zero of={_shq(path)} bs=1M status=none conv=fdatasync 2>/dev/null || true",
-    ]
+def _dd_zero_all(path: str) -> ShellCommand:
+    return ShellCommand(
+        argv=[
+            "sh",
+            "-c",
+            f"dd if=/dev/zero of={_shq(path)} bs=1M status=none conv=fdatasync 2>/dev/null || true",
+        ],
+        check=False,
+        comment=f"zero entire device {path}",
+    )
 
 
-def _dd_zero_prefix(path: str, byte_count: int) -> list[str]:
+def _dd_zero_prefix(path: str, byte_count: int) -> ShellCommand:
     mib = max(1, byte_count // (1024 * 1024))
-    return [
-        "dd",
-        "if=/dev/zero",
-        f"of={path}",
-        "bs=1M",
-        f"count={mib}",
-        "conv=fdatasync",
-        "status=none",
-    ]
+    return ShellCommand(
+        argv=[
+            "dd",
+            "if=/dev/zero",
+            f"of={path}",
+            "bs=1M",
+            f"count={mib}",
+            "conv=fdatasync",
+            "status=none",
+        ],
+        comment=f"zero first {mib} MiB of {path}",
+    )
 
 
 def _shq(s: str) -> str:

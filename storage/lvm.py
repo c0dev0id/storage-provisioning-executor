@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from storage.base import Context, Node, NodeValidationError
+from storage.base import Context, Node, NodeValidationError, ShellCommand
 from storage.system import SIZE_MAX, parse_size
 
 
@@ -19,20 +19,25 @@ class LvmPvNode(Node):
             )
 
     def execute(self) -> None:
-        for argv in self.command_lines():
-            self.ctx.sys.run(argv)
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
 
     def device_path(self) -> str | None:
         parent = self._require_one_parent()
         return parent.device_path()
 
-    def command_lines(self) -> list[list[str]]:
+    def command_lines(self) -> list[ShellCommand]:
         dev = self._require_one_parent().device_path()
         if dev is None:
             raise NodeValidationError(
                 f"lvm-pv id={self.id}: parent has no device path"
             )
-        return [["pvcreate", "-ff", "-y", dev]]
+        return [
+            ShellCommand(
+                argv=["pvcreate", "-ff", "-y", dev],
+                comment=f"create PV on {dev}",
+            )
+        ]
 
 
 class LvmVgNode(Node):
@@ -50,21 +55,29 @@ class LvmVgNode(Node):
             )
 
     def execute(self) -> None:
-        for argv in self.command_lines():
-            self.ctx.sys.run(argv)
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
         self.register_cleanup(lambda: self._deactivate())
 
     def device_path(self) -> None:
         return None
 
-    def command_lines(self) -> list[list[str]]:
+    def command_lines(self) -> list[ShellCommand]:
         pvs = [p.device_path() for p in self._resolved_parents]
         for dev in pvs:
             if dev is None:
                 raise NodeValidationError(
                     f"lvm-vg id={self.id}: parent has no device path"
                 )
-        return [["vgcreate", "-f", "-y", self.name, *[str(d) for d in pvs]]]
+        return [
+            ShellCommand(
+                argv=[
+                    "vgcreate", "-f", "-y", self.name,
+                    *[str(d) for d in pvs],
+                ],
+                comment=f"create VG {self.name}",
+            )
+        ]
 
     def _deactivate(self) -> None:
         self.ctx.sys.run(["vgchange", "-an", self.name], check=False)
@@ -95,15 +108,15 @@ class LvmLvNode(Node):
         parse_size(self.size)
 
     def execute(self) -> None:
-        for argv in self.command_lines():
-            self.ctx.sys.run(argv)
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
 
     def device_path(self) -> str:
         vg = self._require_one_parent()
         vgname = getattr(vg, "name", vg.id)
         return f"/dev/{vgname}/{self.name}"
 
-    def command_lines(self) -> list[list[str]]:
+    def command_lines(self) -> list[ShellCommand]:
         vg = self._require_one_parent()
         vgname = getattr(vg, "name", vg.id)
         parsed = parse_size(self.size)
@@ -111,4 +124,12 @@ class LvmLvNode(Node):
             size_args = ["-l", "100%FREE"]
         else:
             size_args = ["-L", f"{int(parsed)}B"]
-        return [["lvcreate", "-y", "-W", "y", *size_args, "-n", self.name, vgname]]
+        return [
+            ShellCommand(
+                argv=[
+                    "lvcreate", "-y", "-W", "y",
+                    *size_args, "-n", self.name, vgname,
+                ],
+                comment=f"create LV {vgname}/{self.name}",
+            )
+        ]

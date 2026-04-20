@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Any, ClassVar
 
-from storage.base import Context, Node, NodeValidationError
+from storage.base import Context, Node, NodeValidationError, ShellCommand
 
 
 _MD_NAME_RE = re.compile(r"^md[0-9]+$")
@@ -32,32 +32,41 @@ class Raid1Node(Node):
             )
 
     def execute(self) -> None:
-        for argv in self.command_lines():
-            self.ctx.sys.run(argv)
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
         self.register_cleanup(lambda: self._stop())
 
     def device_path(self) -> str:
         return f"/dev/{self.name}"
 
-    def command_lines(self) -> list[list[str]]:
+    def command_lines(self) -> list[ShellCommand]:
         members = self._members()
-        lines: list[list[str]] = []
+        lines: list[ShellCommand] = []
         for dev in members:
-            lines.append(["mdadm", "--zero-superblock", "--force", dev])
+            lines.append(
+                ShellCommand(
+                    argv=["mdadm", "--zero-superblock", "--force", dev],
+                    check=False,
+                    comment=f"zero mdraid superblock on {dev}",
+                )
+            )
         lines.append(
-            [
-                "mdadm",
-                "--create",
-                "--verbose",
-                "--run",
-                "--force",
-                "--assume-clean",
-                "--metadata=1.2",
-                "--level=1",
-                f"--raid-devices={len(members)}",
-                self.device_path(),
-                *members,
-            ]
+            ShellCommand(
+                argv=[
+                    "mdadm",
+                    "--create",
+                    "--verbose",
+                    "--run",
+                    "--force",
+                    "--assume-clean",
+                    "--metadata=1.2",
+                    "--level=1",
+                    f"--raid-devices={len(members)}",
+                    self.device_path(),
+                    *members,
+                ],
+                comment=f"create {self.name} from {' '.join(members)}",
+            )
         )
         return lines
 

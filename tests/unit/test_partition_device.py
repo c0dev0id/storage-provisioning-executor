@@ -95,8 +95,10 @@ def test_hardware_erase_all_plus_mklabel() -> None:
     )
     node.validate()
     lines = node.command_lines()
-    assert any("dd if=/dev/zero" in part for argv in lines for part in argv)
-    assert ["parted", "-s", "/dev/sda", "mklabel", "gpt"] in lines
+    assert any("dd if=/dev/zero" in part for cmd in lines for part in cmd.argv)
+    assert any(
+        cmd.argv == ["parted", "-s", "/dev/sda", "mklabel", "gpt"] for cmd in lines
+    )
 
 
 def test_hardware_erase_1g_emits_dd_count() -> None:
@@ -111,7 +113,7 @@ def test_hardware_erase_1g_emits_dd_count() -> None:
     )
     node.validate()
     lines = node.command_lines()
-    dd = lines[0]
+    dd = lines[0].argv
     assert dd[0] == "dd"
     assert "count=1024" in dd
 

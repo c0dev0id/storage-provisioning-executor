@@ -41,7 +41,7 @@ def test_raid_command_lines() -> None:
         {"id": "r", "parents": ["pA", "pB"], "name": "md128"}, Context()
     )
     n._resolved_parents = [_hw("/dev/sda1"), _hw("/dev/sdb1")]
-    lines = n.command_lines()
+    lines = [c.argv for c in n.command_lines()]
     assert lines[0] == ["mdadm", "--zero-superblock", "--force", "/dev/sda1"]
     assert lines[1] == ["mdadm", "--zero-superblock", "--force", "/dev/sdb1"]
     create = lines[2]
@@ -59,7 +59,7 @@ def test_raid_command_lines_three_members() -> None:
         {"id": "r", "parents": ["a", "b", "c"], "name": "md0"}, Context()
     )
     n._resolved_parents = [_hw("/dev/sda1"), _hw("/dev/sdb1"), _hw("/dev/sdc1")]
-    lines = n.command_lines()
+    lines = [c.argv for c in n.command_lines()]
     zero_lines = [l for l in lines if l[1] == "--zero-superblock"]
     assert len(zero_lines) == 3
     create = lines[-1]

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from storage.base import Context, Node, NodeValidationError
+from storage.base import Context, Node, NodeValidationError, ShellCommand
 from storage.system import SIZE_MAX, parse_size
 
 
@@ -62,8 +62,8 @@ class PartitionNode(Node):
             )
 
     def execute(self) -> None:
-        for argv in self.command_lines():
-            self.ctx.sys.run(argv)
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
 
     def device_path(self) -> str:
         parent_path = self._require_one_parent().device_path()
@@ -77,7 +77,7 @@ class PartitionNode(Node):
             )
         return partition_device(parent_path, self._index)
 
-    def command_lines(self) -> list[list[str]]:
+    def command_lines(self) -> list[ShellCommand]:
         parent_path = self._require_one_parent().device_path()
         if parent_path is None or self._index is None:
             raise NodeValidationError(
@@ -86,17 +86,33 @@ class PartitionNode(Node):
         begin = self._begin_expr or (self.begin or "1MiB")
         end = self._end_expr or _compute_end_expr(begin, self.size)
         name = self.label or self.id
-        lines: list[list[str]] = [
-            ["parted", "-s", "-a", "optimal", parent_path, "--",
-             "mkpart", name, begin, end],
+        lines: list[ShellCommand] = [
+            ShellCommand(
+                argv=[
+                    "parted", "-s", "-a", "optimal", parent_path, "--",
+                    "mkpart", name, begin, end,
+                ],
+                comment=f"create partition {self._index} ({name}) on {parent_path}",
+            ),
         ]
         for flag in self.flags:
             lines.append(
-                ["parted", "-s", parent_path, "set", str(self._index), flag, "on"]
+                ShellCommand(
+                    argv=[
+                        "parted", "-s", parent_path,
+                        "set", str(self._index), flag, "on",
+                    ],
+                )
             )
         if self.uuid:
             lines.append(
-                ["sgdisk", f"--partition-guid={self._index}:{self.uuid}", parent_path]
+                ShellCommand(
+                    argv=[
+                        "sgdisk",
+                        f"--partition-guid={self._index}:{self.uuid}",
+                        parent_path,
+                    ],
+                )
             )
         return lines
 
