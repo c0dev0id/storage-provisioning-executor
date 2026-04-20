@@ -31,9 +31,7 @@ class Raid1Node(Node):
                 f"raid1 id={self.id}: name must match ^md[0-9]+$, got {self.name!r}"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+    def _post_execute(self) -> None:
         self.register_cleanup(self._stop)
 
     def device_path(self) -> str:

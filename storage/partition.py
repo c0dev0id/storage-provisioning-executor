@@ -61,10 +61,6 @@ class PartitionNode(Node):
                 f"partition id={self.id}: flags must be a list of strings"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
-
     def device_path(self) -> str:
         parent_path = self._require_one_parent().device_path()
         if parent_path is None:

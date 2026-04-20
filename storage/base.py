@@ -90,8 +90,13 @@ class Node:
         """Validate fields; raise NodeValidationError on bad input."""
 
     def execute(self) -> None:
-        """Perform the storage operation; register cleanup closures as needed."""
-        raise NotImplementedError
+        """Run command_lines() then call _post_execute() for cleanup registration."""
+        for cmd in self.command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+        self._post_execute()
+
+    def _post_execute(self) -> None:
+        """Override to register cleanup actions after commands complete."""
 
     def device_path(self) -> str | None:
         """Return the block device path this node produces, or None."""

@@ -18,10 +18,6 @@ class LvmPvNode(Node):
                 f"lvm-pv id={self.id}: must have exactly one parent"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
-
     def device_path(self) -> str | None:
         parent = self._require_one_parent()
         return parent.device_path()
@@ -54,9 +50,7 @@ class LvmVgNode(Node):
                 f"lvm-vg id={self.id}: needs at least one PV parent"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+    def _post_execute(self) -> None:
         self.register_cleanup(self._deactivate)
 
     def device_path(self) -> None:
@@ -106,10 +100,6 @@ class LvmLvNode(Node):
                 f"lvm-lv id={self.id}: parent must be lvm-vg, got {parent.TYPE}"
             )
         parse_size(self.size)
-
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
 
     def device_path(self) -> str:
         vg = self._require_one_parent()

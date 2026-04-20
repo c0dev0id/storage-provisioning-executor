@@ -43,9 +43,7 @@ class CryptLuksNode(Node):
                 f"dm-crypt-luks id={self.id}: empty passphrase"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+    def _post_execute(self) -> None:
         self.register_cleanup(self._close)
 
     def device_path(self) -> str:

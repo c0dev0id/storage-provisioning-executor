@@ -53,10 +53,6 @@ class HardwareNode(Node):
                 f"hardware id={self.id}: align must be >= 1, got {self.align}"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
-
     def device_path(self) -> str:
         return self.path
 

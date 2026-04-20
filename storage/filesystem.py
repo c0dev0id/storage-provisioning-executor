@@ -126,9 +126,7 @@ class FilesystemNode(Node):
                 f"got {self.mountpoint!r}"
             )
 
-    def execute(self) -> None:
-        for cmd in self.command_lines():
-            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+    def _post_execute(self) -> None:
         target = self.target_path()
         self.register_cleanup(lambda: self._umount(target))
 
