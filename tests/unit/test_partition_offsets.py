@@ -73,12 +73,23 @@ def test_explicit_begin_overrides_cursor() -> None:
     assert p2._end_expr == "3024MiB"
 
 
-def test_explicit_non_mib_begin_falls_back_to_expression() -> None:
+def test_explicit_non_mib_begin_breaks_chain() -> None:
     hw = _hw()
-    p1 = _part("p1", "512MiB", begin="1G")
+    p1 = _part("p1", "512MiB", begin="999B")
     p2 = _part("p2", "1GiB")
     with pytest.raises(NodeValidationError, match="implicit begin requires"):
         Executor([hw, p1, p2]).prepare()
+
+
+def test_sector_begin_chains_when_mib_aligned() -> None:
+    # 2048 sectors = 1 MiB exactly, so the cursor is preserved.
+    hw = _hw()
+    p1 = _part("p1", "4GiB", begin="2048s")
+    p2 = _part("p2", "4GiB")
+    Executor([hw, p1, p2]).prepare()
+    assert p1._begin_expr == "2048s"
+    assert p1._end_expr == "4097MiB"
+    assert p2._begin_expr == "4097MiB"
 
 
 def test_per_parent_numbering_is_independent() -> None:

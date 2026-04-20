@@ -179,12 +179,17 @@ def _mount_depth(mountpoint: str) -> int:
 
 
 def _try_parse_mib(expr: str) -> int | None:
-    stripped = expr.strip()
-    if stripped.endswith("MiB"):
-        try:
-            return int(stripped[:-3].strip())
-        except ValueError:
-            return None
+    """Return MiB count for expr if it parses to a whole number of MiB."""
+    try:
+        parsed = parse_size(expr)
+    except ValueError:
+        return None
+    if parsed == SIZE_MAX:
+        return None
+    mib = 1024 * 1024
+    byte_val = int(parsed)
+    if byte_val % mib == 0:
+        return byte_val // mib
     return None
 
 

@@ -1,0 +1,124 @@
+vars:
+  hostname: "foo"
+storage:
+  - type: "control"
+    path: "/target"
+
+  - type: "hardware"
+    id: "hw-sda"
+    path: "/dev/sda"
+    overwrite: "yes"
+    align: 8
+    label: "gpt"
+
+  - type: "partition"
+    parents: "hw-sda"
+    id: "part-EFI"
+    label: "EFI"
+    begin: "2048s"
+    size: "4G"
+    uuid: "xyz"
+    flags:
+      - boot
+      - esp
+
+  - type: "partition"
+    parents: "hw-sda"
+    id: "part-boot"
+    label: "boot"
+    size: "4G"
+    uuid: "xzy"
+
+  - type: "partition"
+    parents: "hw-sda"
+    id: "part-lvm-pv"
+    label: "lvm-pv"
+    size: "25G"
+
+  - type: "lvm-pv"
+    id: "lvm-pv"
+    parents: "part-lvm-pv"
+
+  - type: "lvm-vg"
+    id: "lvm-vg-host"
+    parents: ["lvm-pv"]
+
+  - type: "lvm-lv"
+    id: "lvm-lv-c_root"
+    name: "c_root"
+    parents: "lvm-vg-host"
+    size: "8G"
+
+  - type: "dm-crypt-luks"
+    id: "crypt-root"
+    parents: "lvm-lv-c_root"
+    key:
+      slot: 3
+      passphrase: "1234"
+
+  - type: "filesystem"
+    id: "fs-root"
+    fstype: "ext4"
+    label: "{{hostname}}-root"
+    parents: "crypt-root"
+    mountpoint: "/"
+    mkfs_options: []
+
+  - type: "filesystem"
+    id: "fs-boot"
+    fstype: "ext4"
+    label: "{{hostname}}-boot"
+    parents: "part-boot"
+    mountpoint: "/boot"
+    mkfs_options: []
+
+  - type: "filesystem"
+    id: "fs-efi"
+    fstype: "fat32"
+    label: "{{hostname}}-EFI"
+    parents: "part-EFI"
+    mountpoint: "/boot/efi"
+    mkfs_options: []
+
+  - type: "hardware"
+    id: "hw-ssd1"
+    overwrite: "yes"
+    erase: "all"
+    path: "/dev/disk/by-id/nvme_Vendor_device_Serial1"
+    align: 8
+    label: "gpt"
+
+  - type: "partition"
+    parents: "hw-ssd1"
+    id: "part-ssd1"
+    begin: "2048s"
+    size: "{max}"
+    uuid: "xyz"
+
+  - type: "hardware"
+    id: "hw-ssd2"
+    overwrite: "yes"
+    erase: "1G"
+    path: "/dev/disk/by-id/nvme_Vendor_device_Serial2"
+    align: 8
+    label: "gpt"
+
+  - type: "partition"
+    parents: "hw-ssd2"
+    id: "part-ssd2"
+    begin: "2048s"
+    size: "{max}"
+    uuid: "xyz"
+
+  - type: "raid1"
+    id: "nvme-softraid"
+    parents: ["part-ssd1", "part-ssd2"]
+    name: "md128"
+
+  - type: "filesystem"
+    id: "xfs-softraid"
+    parents: "nvme-softraid"
+    fstype: "xfs"
+    label: "ssdraid"
+    mountpoint: "/srv"
+    mkfs_options: []
