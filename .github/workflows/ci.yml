@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint (pylint + mypy)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pylint mypy pyyaml pytest types-PyYAML
+      - name: pylint
+        run: python -m pylint storage/
+      - name: mypy --strict
+        run: python -m mypy --strict storage/
+
+  unit:
+    name: Unit tests (py${{ matrix.python }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install runtime + test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml pytest pytest-cov
+      - name: Run unit tests with coverage
+        run: python -m pytest tests/unit --cov=storage --cov-report=xml -q
+      - name: Upload coverage artifact
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  scriptgen-shellcheck:
+    name: Generated script passes shellcheck (dash)
+    runs-on: ubuntu-24.04
+    needs: unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install runtime deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyyaml
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+      - name: Build sprov binary
+        run: make all
+      - name: Generate script from example spec
+        run: |
+          PYTHONPATH="$PWD" ./sprov --script tests/data/example.yaml > /tmp/example.sh
+          test -s /tmp/example.sh
+      - name: Shellcheck under dash dialect
+        run: shellcheck -s dash /tmp/example.sh
+      - name: Sanity-check with sh -n
+        run: sh -n /tmp/example.sh
+
+  build-packages:
+    name: Build .deb and .udeb
+    runs-on: ubuntu-24.04
+    container:
+      image: debian:trixie-slim
+    needs: unit
+    steps:
+      - name: Install build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            build-essential devscripts debhelper dh-python \
+            python3-all python3-yaml python3-pytest pylint python3-mypy \
+            shellcheck lintian ca-certificates git make
+      - uses: actions/checkout@v4
+      - name: dpkg-buildpackage
+        run: dpkg-buildpackage -b -uc -us
+      - name: Move artifacts to workspace
+        run: |
+          mkdir -p dist
+          cp ../sprov_*.deb ../sprov-udeb_*.udeb ../sprov_*.changes dist/
+      - name: lintian --fail-on warning
+        run: lintian --fail-on warning --no-tag-display-limit dist/sprov_*.changes
+      - uses: actions/upload-artifact@v4
+        with:
+          name: debian-packages
+          path: dist/
+
+  integration:
+    name: Integration tests (privileged Debian)
+    runs-on: ubuntu-24.04
+    needs: build-packages
+    container:
+      image: debian:trixie-slim
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+          path: dist
+      - name: Install the built .deb + test prerequisites
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            python3-pytest util-linux kmod
+          apt-get install -y ./dist/sprov_*.deb
+      - name: Verify installed entry point
+        run: sprov --version
+      - name: Run integration tests
+        env:
+          INTEGRATION: '1'
+        run: python3 -m pytest tests/integration --run-integration -v
+
+  release:
+    name: Create GitHub Release (tag only)
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, unit, scriptgen-shellcheck, build-packages, integration]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: debian-packages
+          path: dist
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/sprov_*.deb
+            dist/sprov-udeb_*.udeb
+          generate_release_notes: true
