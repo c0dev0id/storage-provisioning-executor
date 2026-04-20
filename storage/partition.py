@@ -110,11 +110,17 @@ class PartitionNode(Node):
                     ],
                 )
             )
+        part_dev = partition_device(parent_path, self._index)
         lines.append(
             ShellCommand(
-                argv=["partprobe", parent_path],
+                argv=[
+                    "sh", "-c",
+                    f"partprobe {parent_path} 2>/dev/null; "
+                    f"i=0; while [ $i -lt 50 ] && ! [ -b {part_dev} ]; do "
+                    f"sleep 0.1; i=$((i+1)); done",
+                ],
                 check=False,
-                comment=f"re-read partition table on {parent_path}",
+                comment=f"wait for {part_dev} to be available",
             )
         )
         return lines
