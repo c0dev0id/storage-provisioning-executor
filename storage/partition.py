@@ -120,8 +120,9 @@ class PartitionNode(Node):
                     f"partx -u {parent_path} 2>/dev/null; "
                     f"i=0; while [ $i -lt 50 ] && ! [ -f {sys_path} ]; "
                     f"do sleep 0.1; i=$((i+1)); done; "
-                    f"if ! [ -b {part_dev} ] && [ -f {sys_path} ]; then "
+                    f"if [ -f {sys_path} ]; then "
                     f"D=$(cat {sys_path}); "
+                    f"rm -f {part_dev} 2>/dev/null; "
                     f'mknod {part_dev} b "${{D%:*}}" "${{D#*:}}"; fi',
                 ],
                 check=False,

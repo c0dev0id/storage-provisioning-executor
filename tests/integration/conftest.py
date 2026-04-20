@@ -21,6 +21,9 @@ def _attach(sparse: pathlib.Path) -> str:
 
 
 def _detach(dev: str) -> None:
+    name = dev.rsplit("/", 1)[-1]
+    for path in pathlib.Path("/dev").glob(f"{name}p*"):
+        path.unlink(missing_ok=True)
     subprocess.run(["losetup", "-d", dev], check=False)
 
 

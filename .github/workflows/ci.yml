@@ -121,8 +121,13 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            python3-pytest util-linux kmod
+            python3-pytest util-linux kmod udev
           apt-get install -y ./dist/sprov_*.deb
+      - name: Start udev daemon
+        run: |
+          udevd --daemon 2>/dev/null || true
+          udevadm trigger 2>/dev/null || true
+          udevadm settle --timeout=10 2>/dev/null || true
       - name: Verify installed entry point
         run: sprov --version
       - name: Run integration tests
