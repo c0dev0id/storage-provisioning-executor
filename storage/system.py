@@ -7,7 +7,7 @@ import logging
 import re
 import subprocess
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 
 VERBOSITY_SILENT = 0
@@ -158,3 +158,31 @@ def _decode(data: bytes) -> str:
 
 def _fmt_argv(argv: list[str]) -> str:
     return " ".join(argv)
+
+
+_TEMPLATE_RE = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}")
+
+
+def expand_vars(value: str, variables: dict[str, str]) -> str:
+    """Replace {{var}} occurrences in value using variables; KeyError on miss."""
+
+    def _repl(match: re.Match[str]) -> str:
+        key = match.group(1)
+        if key not in variables:
+            raise KeyError(f"undefined template variable: {key}")
+        return str(variables[key])
+
+    return _TEMPLATE_RE.sub(_repl, value)
+
+
+def expand_vars_in_tree(data: Any, variables: dict[str, str]) -> Any:
+    """Recursively walk dict/list/tuple structures, expanding every leaf string."""
+    if isinstance(data, str):
+        return expand_vars(data, variables)
+    if isinstance(data, dict):
+        return {k: expand_vars_in_tree(v, variables) for k, v in data.items()}
+    if isinstance(data, list):
+        return [expand_vars_in_tree(item, variables) for item in data]
+    if isinstance(data, tuple):
+        return tuple(expand_vars_in_tree(item, variables) for item in data)
+    return data
