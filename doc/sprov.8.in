@@ -1,0 +1,116 @@
+.TH SPROV 8 "@VERSION@" "sprov @VERSION@" "System Administration"
+.SH NAME
+sprov \- declarative storage provisioning executor
+.SH SYNOPSIS
+.B sprov
+.RB [ \-n | \-\-dry\-run ]
+.RB [ \-v ]...
+.RB [ \-q ]...
+.RB [ \-\-script ]
+.RB [ \-\-no\-cleanup\-first ]
+.I SPEC
+.br
+.B sprov \-\-version
+.SH DESCRIPTION
+.B sprov
+reads a YAML specification describing a storage topology as a directed
+acyclic graph (hardware, partitions, RAID, LUKS, LVM, filesystems) and
+either executes the operations in topological order against live block
+devices, or emits a busybox-compatible POSIX shell script that
+performs the same operations when invoked.
+.PP
+Every filesystem
+.B mountpoint
+is rooted beneath the
+.B control.path
+prefix declared in the spec: with
+.B control.path
+= \fI/target\fR, a mountpoint of \fI/boot\fR becomes \fI/target/boot\fR.
+.SH OPTIONS
+.TP
+.BR \-n ", " \-\-dry\-run
+Log every command that would run without actually forking subprocesses.
+.TP
+.BR \-v ", " \-\-verbose
+Increase verbosity. Repeatable: \fB\-v\fR, \fB\-vv\fR, \fB\-vvv\fR
+progress from \fInormal\fR to \fIdebug\fR, which echoes every argv,
+exit code, stdout, and stderr line.
+.TP
+.BR \-q ", " \-\-quiet
+Decrease verbosity (down to \fIsilent\fR — warnings and errors only).
+.TP
+.B \-\-script
+Emit a POSIX shell script to stdout equivalent to the live-execution
+path, then exit. The script targets dash/busybox, uses
+.BR set (1)
+.B \-eu
+for strictness, and handles stdin payloads (passphrases) via quoted
+heredocs so secrets never appear in
+.BR ps (1)
+output.
+.TP
+.B \-\-no\-cleanup\-first
+Skip the pre-flight
+.BR umount (8)
+of
+.B control.path
+that normally precedes execution. Useful when iterating on a spec
+against a freshly-booted installer with a guaranteed-clean state.
+.TP
+.B \-\-version
+Print the version and exit.
+.SH EXIT STATUS
+.TP
+.B 0
+Success.
+.TP
+.B 1
+Spec validation failed — bad YAML, unknown node type, missing
+required field, cycle in the DAG, unresolved parent id.
+.TP
+.B 2
+Execution failed while running a node; reverse cleanup of
+already-succeeded nodes is attempted before exit.
+.TP
+.B 64
+CLI usage error — missing spec argument, unreadable spec file.
+.SH FILES
+.TP
+.I SPEC
+YAML file with two top-level keys:
+.B vars
+(optional mapping of template variables) and
+.B storage
+(list of node entries). See
+.B EXAMPLES
+for the expected shape.
+.SH SUPPORTED NODE TYPES
+.B control, hardware, partition, raid1, dm\-crypt\-luks, lvm\-pv,
+.B lvm\-vg, lvm\-lv, filesystem.
+.SH EXAMPLES
+.PP
+Generate a shell script for offline inspection:
+.PP
+.RS
+.nf
+sprov \-\-script /etc/sprov/install.yaml > /tmp/install.sh
+sh \-n /tmp/install.sh   # syntax-only validation
+.fi
+.RE
+.PP
+Dry-run with full debug logging:
+.PP
+.RS
+.nf
+sprov \-\-dry\-run \-vvv /etc/sprov/install.yaml
+.fi
+.RE
+.SH AUTHOR
+c0dev0id <sh+git@codevoid.de>
+.SH SEE ALSO
+.BR parted (8),
+.BR mdadm (8),
+.BR cryptsetup (8),
+.BR lvm (8),
+.BR mkfs (8),
+.BR mount (8)
