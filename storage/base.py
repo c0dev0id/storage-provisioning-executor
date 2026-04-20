@@ -1,0 +1,108 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""Node base class, Context, exceptions, and parents normalization."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any, Callable, ClassVar
+
+from storage.system import SystemCommand
+
+
+class NodeValidationError(ValueError):
+    """Raised when a node's YAML fields are invalid."""
+
+
+class NodeExecutionError(RuntimeError):
+    """Raised when a node fails to execute."""
+
+
+@dataclass
+class Context:
+    """Runtime context shared across all nodes in a provisioning run."""
+
+    variables: dict[str, str] = field(default_factory=dict)
+    control_path: str = "/target"
+    dry_run: bool = False
+    verbosity: int = 1
+    sys: SystemCommand = field(default_factory=SystemCommand)
+
+
+def normalize_parents(raw: Any) -> list[str]:
+    """Normalize a `parents:` field to a list of id strings.
+
+    Accepts None (→ []), str (→ [str]), or list[str] (→ copy).
+    Anything else raises NodeValidationError.
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        return [raw]
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, str):
+                raise NodeValidationError(
+                    f"parents entries must be strings, got {type(item).__name__}: {item!r}"
+                )
+        return list(raw)
+    raise NodeValidationError(
+        f"parents must be string or list, got {type(raw).__name__}: {raw!r}"
+    )
+
+
+class Node:
+    """Abstract base for every storage graph node."""
+
+    TYPE: ClassVar[str] = ""
+
+    def __init__(self, raw: dict[str, Any], ctx: Context) -> None:
+        if "id" not in raw:
+            raise NodeValidationError(f"{self.TYPE}: missing required field 'id'")
+        self.id: str = str(raw["id"])
+        self.raw: dict[str, Any] = raw
+        self.ctx: Context = ctx
+        self.parents: list[str] = normalize_parents(raw.get("parents"))
+        self._resolved_parents: list[Node] = []
+        self._cleanup_actions: list[Callable[[], None]] = []
+
+    # ------------------------------------------------------------
+    # Contract implemented by subclasses.
+    # ------------------------------------------------------------
+
+    def validate(self) -> None:
+        """Validate fields; raise NodeValidationError on bad input."""
+
+    def execute(self) -> None:
+        """Perform the storage operation; register cleanup closures as needed."""
+        raise NotImplementedError
+
+    def device_path(self) -> str | None:
+        """Return the block device path this node produces, or None."""
+        return None
+
+    def command_lines(self) -> list[list[str]]:
+        """Return argv lists that produce this node's effect.
+
+        Shared between Executor (for logging/dry-run parity) and ScriptGenerator
+        (for shell emission). Subclasses that need runtime-derived state may
+        override execute() directly and return [] here.
+        """
+        return []
+
+    # ------------------------------------------------------------
+    # Helpers.
+    # ------------------------------------------------------------
+
+    def register_cleanup(self, fn: Callable[[], None]) -> None:
+        self._cleanup_actions.append(fn)
+
+    def _require_one_parent(self) -> Node:
+        if len(self._resolved_parents) != 1:
+            raise NodeValidationError(
+                f"{self.TYPE} id={self.id}: expected exactly one parent, "
+                f"got {len(self._resolved_parents)}"
+            )
+        return self._resolved_parents[0]
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__} id={self.id!r}>"
