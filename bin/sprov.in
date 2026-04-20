@@ -1,0 +1,10 @@
+#!@PYTHON@
+# SPDX-License-Identifier: GPL-2.0-or-later
+"""sprov — storage provisioning executor command-line entry point."""
+
+import sys
+
+from storage.main import main
+
+if __name__ == "__main__":
+    sys.exit(main())

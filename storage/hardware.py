@@ -25,7 +25,7 @@ class HardwareNode(Node):
         if "path" not in raw:
             raise NodeValidationError(f"hardware id={self.id}: missing 'path'")
         self.path: str = str(raw["path"])
-        self.overwrite: str = str(raw.get("overwrite", "no")).lower()
+        self.overwrite: str = _as_yes_no(raw.get("overwrite", "no"))
         self.erase: str | None = None if raw.get("erase") is None else str(raw["erase"])
         self.align: int = int(raw.get("align", 1))
         self.label: str | None = (
@@ -112,3 +112,10 @@ def _dd_zero_prefix(path: str, byte_count: int) -> ShellCommand:
 def _shq(s: str) -> str:
     """Shell-single-quote for embedding in a sh -c string."""
     return "'" + s.replace("'", "'\\''") + "'"
+
+
+def _as_yes_no(value: Any) -> str:
+    """Accept yaml booleans (yes/no are bools under YAML 1.1) and strings."""
+    if isinstance(value, bool):
+        return "yes" if value else "no"
+    return str(value).lower()
