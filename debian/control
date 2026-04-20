@@ -1,0 +1,65 @@
+Source: sprov
+Section: admin
+Priority: optional
+Maintainer: c0dev0id <sh+git@codevoid.de>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-python,
+ python3-all,
+ python3-yaml,
+ python3-pytest <!nocheck>,
+ pylint,
+ python3-mypy,
+ shellcheck,
+ lintian
+Standards-Version: 4.7.0
+Homepage: https://github.com/c0dev0id/storage-provisioning-executor
+Rules-Requires-Root: no
+
+Package: sprov
+Architecture: all
+Depends:
+ ${misc:Depends},
+ ${python3:Depends},
+ python3-yaml,
+ parted,
+ mdadm,
+ cryptsetup-bin,
+ lvm2,
+ e2fsprogs,
+ dosfstools,
+ xfsprogs,
+ util-linux,
+ gdisk
+Provides: storage-provisioner
+Description: declarative storage provisioning executor (YAML-driven)
+ sprov reads a YAML specification describing a storage topology as a
+ directed acyclic graph (hardware, partitions, RAID, LUKS, LVM,
+ filesystems) and either executes the operations in topological order
+ against live block devices, or emits a busybox-compatible POSIX
+ shell script that performs the same operations when invoked.
+ .
+ Useful in rescue/installer environments where reproducible, auditable
+ storage provisioning is required.
+
+Package: sprov-udeb
+Package-Type: udeb
+Section: debian-installer
+Priority: optional
+Architecture: all
+Depends:
+ python3-minimal-udeb | python3-udeb,
+ python3-yaml-udeb,
+ parted-udeb,
+ mdadm-udeb,
+ cryptsetup-udeb,
+ lvm2-udeb,
+ e2fsprogs-udeb,
+ dosfstools-udeb,
+ xfsprogs-udeb,
+ util-linux-udeb,
+ gdisk-udeb
+Description: storage provisioning executor (debian-installer variant)
+ Minimal udeb build of sprov for use inside the debian-installer
+ environment. Ships only the Python package and entry point — no man
+ page, no /usr/share/doc contents.

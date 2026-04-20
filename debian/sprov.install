@@ -1,0 +1,3 @@
+usr/bin/sprov
+usr/lib/python3/dist-packages/storage/*.py
+usr/share/man/man8/sprov.8

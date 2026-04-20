@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+export VERSION := $(shell dpkg-parsechangelog -S Version | cut -d- -f1)
+
+%:
+	dh $@ --with python3
+
+override_dh_auto_build:
+	$(MAKE) all VERSION=$(VERSION)
+
+override_dh_auto_install:
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp VERSION=$(VERSION)
+
+override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
+	python3 -m pytest tests/unit -q
+endif
+
+override_dh_installdocs:
+	dh_installdocs -psprov
+
+override_dh_installchangelogs:
+	dh_installchangelogs -psprov
+
+override_dh_compress:
+	dh_compress -psprov
+
+override_dh_clean:
+	dh_clean
+	$(MAKE) clean
