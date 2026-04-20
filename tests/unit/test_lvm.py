@@ -104,7 +104,8 @@ def test_lv_command_lines_fixed_size() -> None:
     lv._resolved_parents = [vg]
     lines = [c.argv for c in lv.command_lines()]
     assert lines == [
-        ["lvcreate", "-y", "-W", "n", "-L", f"{8 * 1024**3}B", "-n", "c_root", "vg-host"],
+        ["lvcreate", "-an", "-y", "-L", f"{8 * 1024**3}B", "-n", "c_root", "vg-host"],
+        ["lvchange", "-ay", "vg-host/c_root"],
         ["vgmknodes", "vg-host"],
     ]
 
@@ -117,7 +118,8 @@ def test_lv_command_lines_max_size() -> None:
     lv._resolved_parents = [vg]
     lines = [c.argv for c in lv.command_lines()]
     assert lines == [
-        ["lvcreate", "-y", "-W", "n", "-l", "100%FREE", "-n", "full", "vg-host"],
+        ["lvcreate", "-an", "-y", "-l", "100%FREE", "-n", "full", "vg-host"],
+        ["lvchange", "-ay", "vg-host/full"],
         ["vgmknodes", "vg-host"],
     ]
 

@@ -114,13 +114,15 @@ class LvmLvNode(Node):
             size_args = ["-l", "100%FREE"]
         else:
             size_args = ["-L", f"{int(parsed)}B"]
+        lv_path = f"{vgname}/{self.name}"
         return [
             ShellCommand(
-                argv=[
-                    "lvcreate", "-y", "-W", "n",
-                    *size_args, "-n", self.name, vgname,
-                ],
-                comment=f"create LV {vgname}/{self.name}",
+                argv=["lvcreate", "-an", "-y", *size_args, "-n", self.name, vgname],
+                comment=f"create LV {lv_path} (inactive)",
+            ),
+            ShellCommand(
+                argv=["lvchange", "-ay", lv_path],
+                comment=f"activate {lv_path}",
             ),
             ShellCommand(
                 argv=["vgmknodes", vgname],
