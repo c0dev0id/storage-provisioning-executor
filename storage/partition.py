@@ -111,16 +111,21 @@ class PartitionNode(Node):
                 )
             )
         part_dev = partition_device(parent_path, self._index)
+        part_name = part_dev.split("/")[-1]
+        sys_path = f"/sys/class/block/{part_name}/dev"
         lines.append(
             ShellCommand(
                 argv=[
                     "sh", "-c",
-                    f"partprobe {parent_path} 2>/dev/null; "
-                    f"i=0; while [ $i -lt 50 ] && ! [ -b {part_dev} ]; do "
-                    f"sleep 0.1; i=$((i+1)); done",
+                    f"partx -u {parent_path} 2>/dev/null; "
+                    f"i=0; while [ $i -lt 50 ] && ! [ -f {sys_path} ]; "
+                    f"do sleep 0.1; i=$((i+1)); done; "
+                    f"if ! [ -b {part_dev} ] && [ -f {sys_path} ]; then "
+                    f"D=$(cat {sys_path}); "
+                    f'mknod {part_dev} b "${{D%:*}}" "${{D#*:}}"; fi',
                 ],
                 check=False,
-                comment=f"wait for {part_dev} to be available",
+                comment=f"ensure {part_dev} is accessible",
             )
         )
         return lines
