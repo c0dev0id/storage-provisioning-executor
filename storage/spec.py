@@ -29,7 +29,11 @@ TYPE_REGISTRY: dict[str, Type[Node]] = {
 }
 
 
-def load_spec(yaml_text: str, *, ctx_overrides: dict[str, Any] | None = None) -> tuple[Context, list[Node]]:
+def load_spec(
+    yaml_text: str,
+    *,
+    ctx_overrides: dict[str, Any] | None = None,
+) -> tuple[Context, list[Node]]:
     """Parse YAML spec, expand variables, extract control, instantiate nodes.
 
     Returns (context, nodes). The caller passes `nodes` to `Executor`.

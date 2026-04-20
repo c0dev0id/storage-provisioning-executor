@@ -96,7 +96,7 @@ jobs:
       - name: Move artifacts to workspace
         run: |
           mkdir -p dist
-          cp ../sprov_*.deb ../sprov-udeb_*.udeb ../sprov_*.changes dist/
+          cp ../sprov_*.deb ../sprov-udeb_*.udeb ../sprov_*.changes ../sprov_*.buildinfo dist/
       - name: lintian --fail-on warning
         run: lintian --fail-on warning --no-tag-display-limit dist/sprov_*.changes
       - uses: actions/upload-artifact@v4

@@ -46,7 +46,7 @@ class CryptLuksNode(Node):
     def execute(self) -> None:
         for cmd in self.command_lines():
             self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
-        self.register_cleanup(lambda: self._close())
+        self.register_cleanup(self._close)
 
     def device_path(self) -> str:
         return f"/dev/mapper/{self.mapper_name}"

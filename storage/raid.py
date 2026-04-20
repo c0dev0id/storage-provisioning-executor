@@ -34,7 +34,7 @@ class Raid1Node(Node):
     def execute(self) -> None:
         for cmd in self.command_lines():
             self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
-        self.register_cleanup(lambda: self._stop())
+        self.register_cleanup(self._stop)
 
     def device_path(self) -> str:
         return f"/dev/{self.name}"

@@ -57,7 +57,7 @@ class LvmVgNode(Node):
     def execute(self) -> None:
         for cmd in self.command_lines():
             self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
-        self.register_cleanup(lambda: self._deactivate())
+        self.register_cleanup(self._deactivate)
 
     def device_path(self) -> None:
         return None

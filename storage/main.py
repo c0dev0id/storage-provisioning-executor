@@ -50,7 +50,7 @@ def main(
     _setup_logging(verbosity)
 
     try:
-        yaml_text = pathlib.Path(args.spec).read_text()
+        yaml_text = pathlib.Path(args.spec).read_text(encoding="utf-8")
     except OSError as exc:
         print(f"sprov: cannot read spec: {exc}", file=err)
         return EXIT_USAGE
@@ -145,7 +145,7 @@ def _preflight_cleanup(control_path: str) -> None:
     sysc = SystemCommand()
     try:
         sysc.run(["umount", "-R", control_path], check=False)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:  # pylint: disable=broad-exception-caught
         _logger.debug("pre-flight umount ignored: %s", exc)
 
 

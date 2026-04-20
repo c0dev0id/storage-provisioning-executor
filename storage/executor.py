@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
+# pylint: disable=protected-access
 """Executor — DAG build, topological sort, execute, reverse cleanup."""
 
 from __future__ import annotations
@@ -160,7 +161,7 @@ class Executor:
             for fn in reversed(node._cleanup_actions):
                 try:
                     fn()
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:  # pylint: disable=broad-exception-caught
                     _logger.warning(
                         "cleanup action for node %r raised: %s", node.id, exc
                     )
