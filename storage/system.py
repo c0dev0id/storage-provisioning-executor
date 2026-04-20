@@ -1,17 +1,77 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""System-level helpers: subprocess wrapper with dry-run and verbosity."""
+"""System-level helpers: subprocess wrapper, size parser, templating."""
 
 from __future__ import annotations
 
 import logging
+import re
 import subprocess
 from dataclasses import dataclass, field
+from typing import Literal
 
 
 VERBOSITY_SILENT = 0
 VERBOSITY_NORMAL = 1
 VERBOSITY_VERBOSE = 2
 VERBOSITY_DEBUG = 3
+
+SECTOR_SIZE = 512
+SIZE_MAX: Literal["MAX"] = "MAX"
+
+_SIZE_SUFFIXES: dict[str, int] = {
+    "": 1,
+    "b": 1,
+    "k": 1024,
+    "kib": 1024,
+    "kb": 1000,
+    "m": 1024**2,
+    "mib": 1024**2,
+    "mb": 1000**2,
+    "g": 1024**3,
+    "gib": 1024**3,
+    "gb": 1000**3,
+    "t": 1024**4,
+    "tib": 1024**4,
+    "tb": 1000**4,
+}
+
+_SIZE_RE = re.compile(r"^\s*(\d+)\s*([a-zA-Z]*)\s*$")
+
+
+def parse_size(expr: str | int, *, sector_size: int = SECTOR_SIZE) -> int | Literal["MAX"]:
+    """Parse a size expression into bytes.
+
+    Accepts:
+      - int              -> returned as-is (bytes)
+      - "1024"           -> bytes
+      - "4G", "4GiB"     -> binary multiplier
+      - "4GB"            -> decimal multiplier
+      - "2048s"          -> sectors * sector_size
+      - "{max}" or "max" -> sentinel SIZE_MAX
+
+    Raises ValueError on unparseable input.
+    """
+    if isinstance(expr, bool):
+        raise ValueError(f"unparseable size: {expr!r}")
+    if isinstance(expr, int):
+        if expr < 0:
+            raise ValueError(f"size must be non-negative: {expr}")
+        return expr
+    if not isinstance(expr, str):
+        raise ValueError(f"unparseable size: {expr!r}")
+    s = expr.strip()
+    if s.lower() in ("{max}", "max"):
+        return SIZE_MAX
+    if s.lower().endswith("s") and s[:-1].isdigit():
+        return int(s[:-1]) * sector_size
+    match = _SIZE_RE.match(s)
+    if match is None:
+        raise ValueError(f"unparseable size: {expr!r}")
+    number = int(match.group(1))
+    suffix = match.group(2).lower()
+    if suffix not in _SIZE_SUFFIXES:
+        raise ValueError(f"unknown size suffix {suffix!r} in {expr!r}")
+    return number * _SIZE_SUFFIXES[suffix]
 
 
 @dataclass
