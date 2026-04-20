@@ -111,7 +111,7 @@ class PartitionNode(Node):
                 )
             )
         part_dev = partition_device(parent_path, self._index)
-        part_name = part_dev.split("/")[-1]
+        part_name = part_dev.rsplit("/", maxsplit=1)[-1]
         sys_path = f"/sys/class/block/{part_name}/dev"
         lines.append(
             ShellCommand(

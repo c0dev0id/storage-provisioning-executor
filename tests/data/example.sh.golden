@@ -40,7 +40,9 @@ vgcreate -f -y lvm-vg-host /dev/sda3
 
 # === lvm-lv-c_root (lvm-lv) ===
 # create LV lvm-vg-host/c_root
-lvcreate -y -W y -L 8589934592B -n c_root lvm-vg-host
+lvcreate -y -W n -L 8589934592B -n c_root lvm-vg-host
+# create device nodes for lvm-vg-host
+vgmknodes lvm-vg-host
 
 # === crypt-root (dm-crypt-luks) ===
 # LUKS2 format /dev/lvm-vg-host/c_root

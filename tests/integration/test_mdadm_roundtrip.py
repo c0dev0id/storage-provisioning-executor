@@ -33,11 +33,11 @@ storage:
   - type: partition
     id: pA
     parents: hwA
-    size: 64MiB
+    size: 400MiB
   - type: partition
     id: pB
     parents: hwB
-    size: 64MiB
+    size: 400MiB
   - type: raid1
     id: rd
     parents: [pA, pB]

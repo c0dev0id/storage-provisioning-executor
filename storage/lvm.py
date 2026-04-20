@@ -117,9 +117,13 @@ class LvmLvNode(Node):
         return [
             ShellCommand(
                 argv=[
-                    "lvcreate", "-y", "-W", "y",
+                    "lvcreate", "-y", "-W", "n",
                     *size_args, "-n", self.name, vgname,
                 ],
                 comment=f"create LV {vgname}/{self.name}",
-            )
+            ),
+            ShellCommand(
+                argv=["vgmknodes", vgname],
+                comment=f"create device nodes for {vgname}",
+            ),
         ]

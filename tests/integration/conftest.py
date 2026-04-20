@@ -42,7 +42,7 @@ def two_loop_devices(tmp_path: pathlib.Path) -> Iterator[tuple[str, str]]:
     devs: list[str] = []
     try:
         for p in paths:
-            subprocess.run(["truncate", "-s", "128M", str(p)], check=True)
+            subprocess.run(["truncate", "-s", "512M", str(p)], check=True)
             devs.append(_attach(p))
         yield (devs[0], devs[1])
     finally:
@@ -56,7 +56,7 @@ def three_loop_devices(tmp_path: pathlib.Path) -> Iterator[tuple[str, str, str]]
     devs: list[str] = []
     try:
         for p in paths:
-            subprocess.run(["truncate", "-s", "256M", str(p)], check=True)
+            subprocess.run(["truncate", "-s", "512M", str(p)], check=True)
             devs.append(_attach(p))
         yield (devs[0], devs[1], devs[2])
     finally:
