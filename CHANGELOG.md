@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- User-facing `README.md` covering installation, spec format, all node types, CLI options, exit codes, and shell script mode.
+- Original implementation brief moved to `doc/project-specification.md` for contributor reference.
+
 ## [0.1.1] - 2026-04-20
 
 ### Fixed
