@@ -58,4 +58,5 @@
 - **Dry-run mode (`--dry-run`):** log every command, never fork.
 - **Variable expansion (`{{var}}`):** walks every leaf string in the parsed YAML tree before node instantiation; undefined variable → `KeyError`.
 - **Node contract:** `validate()` / `execute()` / `device_path()` / `command_lines()` / `register_cleanup()`. Uniform surface across all node types keeps executor and scriptgen simple.
+- **Node types:** `hardware`, `partition`, `lvm-pv`, `lvm-vg`, `lvm-lv`, `raid1`, `dm-crypt-luks`, `filesystem`, `swap`.
 - **Man page (`sprov(8)`):** mdoc-formatted, `@VERSION@` substituted from the Debian changelog at build time.
