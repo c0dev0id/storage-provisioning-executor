@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- New `swap` node type: `mkswap` + `swapon` a block device, with optional label and extra `mkswap_options`. Cleanup on failure runs `swapoff`. No mountpoint field — swap space is not a mounted filesystem.
 - User-facing `README.md` covering installation, spec format, all node types, CLI options, exit codes, and shell script mode.
 - Original implementation brief moved to `doc/project-specification.md` for contributor reference.
 

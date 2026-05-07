@@ -14,6 +14,7 @@ from storage.hardware import HardwareNode
 from storage.lvm import LvmLvNode, LvmPvNode, LvmVgNode
 from storage.partition import PartitionNode
 from storage.raid import Raid1Node
+from storage.swap import SwapNode
 from storage.system import expand_vars_in_tree
 
 
@@ -26,6 +27,7 @@ TYPE_REGISTRY: dict[str, Type[Node]] = {
     "lvm-vg": LvmVgNode,
     "lvm-lv": LvmLvNode,
     "filesystem": FilesystemNode,
+    "swap": SwapNode,
 }
 
 
