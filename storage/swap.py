@@ -36,7 +36,12 @@ class SwapNode(Node):
 
     def _post_execute(self) -> None:
         dev = self._require_one_parent().device_path()
-        self.register_cleanup(lambda: self.ctx.sys.run(["swapoff", dev], check=False))
+        if dev is None:
+            return
+        self.register_cleanup(lambda: self._swapoff(dev))
+
+    def _swapoff(self, dev: str) -> None:
+        self.ctx.sys.run(["swapoff", dev], check=False)
 
     def command_lines(self) -> list[ShellCommand]:
         dev = self._require_one_parent().device_path()
