@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Generated shell script now runs under `set -eux` so dash traces each command to stderr before executing it. Heredoc bodies (LUKS passphrases) are not printed by `-x`.
 - `mkfs.ext2/ext3/ext4`, `mkfs.xfs`, and `mkfs.btrfs` are now invoked with `-q` to suppress progress banners. `mkfs.vfat` is untouched (no `-q` flag, silent by default in dosfstools 4.x).
+- Partition creation no longer emits a `sh -c 'partx ... poll sysfs ... mknod'` block per partition. Replaced with plain `partx -a -n N:N <parent>` + `udevadm settle`. The mknod fallback was over-cautious: real installers, rescue images, and CI containers all run udevd, so the kernel's `BLKPG_ADD_PARTITION` event reliably materializes the device node. Emitted scripts are dramatically cleaner.
 
 ## [0.1.1] - 2026-04-20
 

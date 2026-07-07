@@ -111,23 +111,20 @@ class PartitionNode(Node):
                 )
             )
         part_dev = partition_device(parent_path, self._index)
-        part_name = part_dev.rsplit("/", maxsplit=1)[-1]
-        sys_path = f"/sys/class/block/{part_name}/dev"
         lines.append(
             ShellCommand(
                 argv=[
-                    "sh", "-c",
-                    f"partx -a -n {self._index}:{self._index} {parent_path} 2>/dev/null; "
-                    f"udevadm settle 2>/dev/null; "
-                    f"i=0; while [ $i -lt 50 ] && ! [ -f {sys_path} ]; "
-                    f"do sleep 0.1; i=$((i+1)); done; "
-                    f"if [ -f {sys_path} ] && ! [ -b {part_dev} ]; then "
-                    f"D=$(cat {sys_path}); "
-                    f"rm -f {part_dev} 2>/dev/null; "
-                    f'mknod {part_dev} b "${{D%:*}}" "${{D#*:}}"; fi',
+                    "partx", "-a", "-n",
+                    f"{self._index}:{self._index}",
+                    parent_path,
                 ],
-                check=False,
-                comment=f"ensure {part_dev} is accessible",
+                comment=f"register partition {self._index} with the kernel",
+            )
+        )
+        lines.append(
+            ShellCommand(
+                argv=["udevadm", "settle"],
+                comment=f"wait for udev to create {part_dev}",
             )
         )
         return lines
