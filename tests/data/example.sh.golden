@@ -18,7 +18,7 @@ parted -s /dev/sda set 1 boot on
 parted -s /dev/sda set 1 esp on
 sgdisk --partition-guid=1:xyz /dev/sda
 # register partition 1 with the kernel
-partx -a -n 1:1 /dev/sda
+partx -a -n 1:1 /dev/sda || true
 # wait for udev to create /dev/sda1
 udevadm settle
 
@@ -27,7 +27,7 @@ udevadm settle
 parted -s -a optimal /dev/sda -- mkpart boot 4097MiB 8193MiB
 sgdisk --partition-guid=2:xzy /dev/sda
 # register partition 2 with the kernel
-partx -a -n 2:2 /dev/sda
+partx -a -n 2:2 /dev/sda || true
 # wait for udev to create /dev/sda2
 udevadm settle
 
@@ -35,7 +35,7 @@ udevadm settle
 # create partition 3 (lvm-pv) on /dev/sda
 parted -s -a optimal /dev/sda -- mkpart lvm-pv 8193MiB 33793MiB
 # register partition 3 with the kernel
-partx -a -n 3:3 /dev/sda
+partx -a -n 3:3 /dev/sda || true
 # wait for udev to create /dev/sda3
 udevadm settle
 
@@ -85,7 +85,7 @@ parted -s /dev/disk/by-id/nvme_Vendor_device_Serial1 mklabel gpt
 parted -s -a optimal /dev/disk/by-id/nvme_Vendor_device_Serial1 -- mkpart part-ssd1 2048s 100%
 sgdisk --partition-guid=1:xyz /dev/disk/by-id/nvme_Vendor_device_Serial1
 # register partition 1 with the kernel
-partx -a -n 1:1 /dev/disk/by-id/nvme_Vendor_device_Serial1
+partx -a -n 1:1 /dev/disk/by-id/nvme_Vendor_device_Serial1 || true
 # wait for udev to create /dev/disk/by-id/nvme_Vendor_device_Serial1p1
 udevadm settle
 
@@ -100,7 +100,7 @@ parted -s /dev/disk/by-id/nvme_Vendor_device_Serial2 mklabel gpt
 parted -s -a optimal /dev/disk/by-id/nvme_Vendor_device_Serial2 -- mkpart part-ssd2 2048s 100%
 sgdisk --partition-guid=1:xyz /dev/disk/by-id/nvme_Vendor_device_Serial2
 # register partition 1 with the kernel
-partx -a -n 1:1 /dev/disk/by-id/nvme_Vendor_device_Serial2
+partx -a -n 1:1 /dev/disk/by-id/nvme_Vendor_device_Serial2 || true
 # wait for udev to create /dev/disk/by-id/nvme_Vendor_device_Serial2p1
 udevadm settle
 

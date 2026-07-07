@@ -119,6 +119,7 @@ class PartitionNode(Node):
                     parent_path,
                 ],
                 comment=f"register partition {self._index} with the kernel",
+                check=False,
             )
         )
         lines.append(

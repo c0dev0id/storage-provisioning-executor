@@ -51,8 +51,8 @@
 12. **`gmake` on OpenBSD unlocks GNU Make idioms.**
     Suffix-rule automatic variables like `$<` and `$(wildcard)` are GNU-only under BSD make but the project is built on Debian where `/usr/bin/make` is GNU. Using `gmake` on the dev box keeps the Makefile portable without a second dialect.
 
-13. **No mknod fallback for partition device nodes.**
-    The earlier `sh -c 'partx; udevadm settle; poll sysfs; mknod'` block was over-cautious. Every target environment sprov runs in — Debian installer, rescue image, live boot, CI privileged container (which starts `udevd --daemon` explicitly in `.github/workflows/ci.yml`) — has a running udev. `partx -a -n N:N` triggers `BLKPG_ADD_PARTITION`; the kernel emits a uevent; udev creates the node; `udevadm settle` waits for the event queue to drain. mknod is dead code in every real environment. Removing it also collapses the emitted script from an unreadable one-liner per partition to two named commands.
+13. **No mknod fallback for partition device nodes; `partx -a` is `check=False`.**
+    The earlier `sh -c 'partx; udevadm settle; poll sysfs; mknod'` block was over-cautious. Every target environment sprov runs in — Debian installer, rescue image, live boot, CI privileged container (which starts `udevd --daemon` explicitly in `.github/workflows/ci.yml`) — has a running udev. `partx -a -n N:N` triggers `BLKPG_ADD_PARTITION`; the kernel emits a uevent; udev creates the node; `udevadm settle` waits for the event queue to drain. mknod is dead code in every real environment. Removing it also collapses the emitted script from an unreadable one-liner per partition to two named commands. The `partx -a` step itself is emitted with `check=False` (script: `|| true`): if the kernel has already auto-rescanned the partition table — which happens on loop devices attached with `losetup -P`, and on some kernel versions after any `BLKPG_UPD` — `partx -a` returns rc=1 "error adding partition N". That is not an error; the node already exists. `udevadm settle` remains the real gate, and any downstream command that actually needs the partition device path will surface a genuine failure.
 
 ## Core Features
 
