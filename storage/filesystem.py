@@ -159,5 +159,14 @@ class FilesystemNode(Node):
             ),
         ]
 
+    def verify_command_lines(self) -> list[ShellCommand]:
+        target = self.target_path()
+        return [
+            ShellCommand(
+                argv=["mountpoint", "-q", target],
+                comment=f"verify {target} is mounted",
+            ),
+        ]
+
     def _umount(self, target: str) -> None:
         self.ctx.sys.run(["umount", target], check=False)

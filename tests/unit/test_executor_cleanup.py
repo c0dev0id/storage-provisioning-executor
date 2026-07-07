@@ -127,6 +127,68 @@ def test_run_no_failure_no_cleanup_invoked() -> None:
     assert log == ["exec:a", "exec:b"]
 
 
+class _RecorderWithVerify(_Recorder):
+    """Records execute and emits a verify ShellCommand via verify_command_lines."""
+
+    def __init__(
+        self,
+        raw: dict[str, Any],
+        ctx: Context,
+        *,
+        log: list[str],
+        verify_argv: list[str],
+    ) -> None:
+        super().__init__(raw, ctx, log=log)
+        self._verify_argv = verify_argv
+
+    def verify_command_lines(self):  # type: ignore[no-untyped-def]
+        from storage.base import ShellCommand
+        return [ShellCommand(argv=self._verify_argv, comment="verify stub")]
+
+
+def test_verify_runs_after_all_nodes_execute_successfully() -> None:
+    from storage.executor import Executor
+    from storage.system import SystemCommand
+
+    log: list[str] = []
+    sys = SystemCommand(dry_run=True)
+    ctx = Context(sys=sys)
+    a = _Recorder({"id": "a"}, ctx, log=log)
+    b = _RecorderWithVerify(
+        {"id": "b", "parents": "a"},
+        ctx,
+        log=log,
+        verify_argv=["mountpoint", "-q", "/target"],
+    )
+    Executor([a, b]).run()
+    assert log == ["exec:a", "exec:b"]
+
+
+def test_verify_failure_triggers_cleanup_and_raises() -> None:
+    from unittest.mock import patch
+
+    from storage.executor import Executor
+    from storage.system import CommandResult, SystemCommandError
+
+    log: list[str] = []
+    ctx = Context()
+    a = _Recorder({"id": "a"}, ctx, log=log, cleanups=["a1"])
+    b = _RecorderWithVerify(
+        {"id": "b", "parents": "a"},
+        ctx,
+        log=log,
+        verify_argv=["mountpoint", "-q", "/target/boot"],
+    )
+
+    def fake_run(argv, **_kwargs):  # type: ignore[no-untyped-def]
+        raise SystemCommandError(CommandResult(cmd=argv, rc=32, stderr="not mounted"))
+
+    with patch.object(ctx.sys, "run", side_effect=fake_run):
+        with pytest.raises(NodeExecutionError, match="verification failed"):
+            Executor([a, b]).run()
+    assert "cleanup:a:a1" in log
+
+
 def test_succeeded_list_tracks_completed_nodes() -> None:
     from storage.executor import Executor
 

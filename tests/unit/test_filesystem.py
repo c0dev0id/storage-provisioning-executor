@@ -185,6 +185,34 @@ def test_device_path_is_none() -> None:
     assert fs.device_path() is None
 
 
+def test_verify_command_lines_checks_mountpoint() -> None:
+    fs = FilesystemNode(
+        {"id": "fs", "parents": "hw", "fstype": "ext4", "mountpoint": "/boot"},
+        Context(control_path="/target"),
+    )
+    fs._resolved_parents = [_hw("/dev/sda1")]
+    cmds = fs.verify_command_lines()
+    assert len(cmds) == 1
+    assert cmds[0].argv == ["mountpoint", "-q", "/target/boot"]
+    assert cmds[0].check is True
+
+
+def test_verify_command_lines_respects_ignore_errors() -> None:
+    fs = FilesystemNode(
+        {
+            "id": "fs",
+            "parents": "hw",
+            "fstype": "ext4",
+            "mountpoint": "/",
+            "ignore_errors": True,
+        },
+        Context(control_path="/target"),
+    )
+    fs._resolved_parents = [_hw("/dev/sda1")]
+    cmds = fs.effective_verify_command_lines()
+    assert cmds[0].check is False
+
+
 def test_all_fstypes_have_mkfs() -> None:
     for fstype in ("ext2", "ext3", "ext4", "xfs", "btrfs", "fat32", "vfat"):
         fs = FilesystemNode(

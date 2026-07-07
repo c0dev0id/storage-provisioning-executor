@@ -151,6 +151,21 @@ class Node:
             return cmds
         return [dataclasses.replace(c, check=False) for c in cmds]
 
+    def verify_command_lines(self) -> list[ShellCommand]:
+        """Return post-provisioning verification commands for this node.
+
+        Runs after every node has executed successfully. Default is no-op;
+        FilesystemNode overrides to check that its mountpoint is mounted.
+        """
+        return []
+
+    def effective_verify_command_lines(self) -> list[ShellCommand]:
+        """verify_command_lines() with ignore_errors applied to `check`."""
+        cmds = self.verify_command_lines()
+        if not self.ignore_errors:
+            return cmds
+        return [dataclasses.replace(c, check=False) for c in cmds]
+
     # ------------------------------------------------------------
     # Helpers.
     # ------------------------------------------------------------

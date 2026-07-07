@@ -76,6 +76,30 @@ def test_render_command_stdin_with_check_false() -> None:
     assert "cat <<'SPROV_STDIN_EOF' || true" in out
 
 
+def test_emit_omits_verify_section_when_no_nodes_verify() -> None:
+    out = ScriptGenerator([]).emit()
+    assert "# === verify ===" not in out
+
+
+def test_emit_appends_verify_section_from_filesystem_nodes() -> None:
+    from storage.base import Context
+    from storage.filesystem import FilesystemNode
+    from storage.hardware import HardwareNode
+
+    ctx = Context(control_path="/target")
+    hw = HardwareNode({"id": "hw", "path": "/dev/sda1"}, ctx)
+    fs = FilesystemNode(
+        {"id": "fs", "parents": "hw", "fstype": "ext4", "mountpoint": "/boot"},
+        ctx,
+    )
+    fs._resolved_parents = [hw]
+    out = ScriptGenerator([hw, fs]).emit()
+    assert "# === verify ===" in out
+    assert "mountpoint -q /target/boot" in out
+    # Verify section must come after the fs node's own commands.
+    assert out.index("mount /dev/sda1") < out.index("mountpoint -q")
+
+
 def test_emit_golden_matches_checked_in_file() -> None:
     yaml_path = DATA_DIR / "example.yaml"
     golden_path = DATA_DIR / "example.sh.golden"

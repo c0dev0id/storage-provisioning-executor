@@ -143,3 +143,13 @@ mkfs.vfat -F 32 -n FOO-EFI /dev/sda1
 mkdir -p /target/boot/efi
 # mount /dev/sda1 at /target/boot/efi
 mount /dev/sda1 /target/boot/efi
+
+# === verify ===
+# verify /target is mounted
+mountpoint -q /target
+# verify /target/boot is mounted
+mountpoint -q /target/boot
+# verify /target/srv is mounted
+mountpoint -q /target/srv
+# verify /target/boot/efi is mounted
+mountpoint -q /target/boot/efi

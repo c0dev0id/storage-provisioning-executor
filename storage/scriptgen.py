@@ -39,6 +39,14 @@ class ScriptGenerator:
             parts.append(f"# === {node.id} ({node.TYPE}) ===")
             for cmd in cmds:
                 parts.append(_render_command(cmd))
+        verify_cmds: list[ShellCommand] = []
+        for node in self.nodes:
+            verify_cmds.extend(node.effective_verify_command_lines())
+        if verify_cmds:
+            parts.append("")
+            parts.append("# === verify ===")
+            for cmd in verify_cmds:
+                parts.append(_render_command(cmd))
         parts.append("")
         return "\n".join(parts)
 

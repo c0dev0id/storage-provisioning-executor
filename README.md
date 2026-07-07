@@ -43,6 +43,11 @@ On failure, `sprov` attempts reverse cleanup: unmount filesystems, close LUKS
 devices, deactivate LVM, stop RAID arrays — so re-running is safe without
 manual intervention.
 
+After every node has run successfully, `sprov` verifies that each declared
+`filesystem` mountpoint is actually mounted (via `mountpoint -q`). A missing
+mount triggers cleanup and a non-zero exit. The generated script (`--script`)
+emits the same checks in a `# === verify ===` block at the end.
+
 ## Spec Format
 
 The spec is a YAML file with two top-level keys:

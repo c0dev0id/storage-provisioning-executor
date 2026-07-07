@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - New `swap` node type: `mkswap` + `swapon` a block device, with optional label and extra `mkswap_options`. Cleanup on failure runs `swapoff`. No mountpoint field — swap space is not a mounted filesystem.
 - Per-node `ignore_errors: true` flag: swallow failures of the node's own commands in both live and `--script` modes (the emitted script appends `|| true` to each command in the block).
+- Post-provisioning mount verification: after every node runs, sprov checks that each `filesystem` node's mountpoint is actually a mountpoint (`mountpoint -q <path>`). A failed check triggers reverse cleanup and a non-zero exit, so a silently-missing mount can no longer masquerade as success. The generated shell script emits the same checks in a `# === verify ===` block at the end.
 - User-facing `README.md` covering installation, spec format, all node types, CLI options, exit codes, and shell script mode.
 - Original implementation brief moved to `doc/project-specification.md` for contributor reference.
 
