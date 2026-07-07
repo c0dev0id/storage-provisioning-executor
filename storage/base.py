@@ -93,11 +93,7 @@ def normalize_parents(raw: Any) -> list[str]:
 
 
 def normalize_modules(raw: Any, *, where: str) -> list[str]:
-    """Normalize a `modules:` field to a list of module names.
-
-    Accepts None (→ []), str (→ [str]), or list[str] (→ copy). Empty and
-    whitespace-only entries are rejected.
-    """
+    """Normalize a `modules:` field; empty/whitespace-only entries are rejected."""
     if raw is None:
         return []
     if isinstance(raw, str):
@@ -231,21 +227,10 @@ def collect_modprobe_commands(
     operator can safely repeat a module on every node that needs it without
     producing duplicate `modprobe` lines.
     """
-    seen: set[str] = set()
-    result: list[ShellCommand] = []
-    for name in ctx.modules:
-        if name in seen:
-            continue
-        seen.add(name)
-        result.append(ShellCommand(
-            argv=["modprobe", name], comment=f"load kernel module {name}",
-        ))
+    names = list(ctx.modules)
     for node in nodes:
-        for name in node.modules:
-            if name in seen:
-                continue
-            seen.add(name)
-            result.append(ShellCommand(
-                argv=["modprobe", name], comment=f"load kernel module {name}",
-            ))
-    return result
+        names.extend(node.modules)
+    return [
+        ShellCommand(argv=["modprobe", n], comment=f"load kernel module {n}")
+        for n in dict.fromkeys(names)
+    ]
