@@ -1,61 +1,96 @@
-This file contains important informations for AI agents like claude, chatgpt and copilot.
+# CLAUDE.md
 
-# *MOST IMPORTANT RULES THAT MUST BE FOLLOWED*
-- *Always commit* every logical step! Don't batch unrelated changes into one commit.
-- *Always rebase* the working branch onto the latest main (or master, if main doesn't exist) at the end of a task. Resolve any conflicts during the rebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Keep A Changelog
-Maintain a CHANGELOG.md file in every project, following the specification at:
-https://raw.githubusercontent.com/olivierlacan/keep-a-changelog/refs/heads/main/CHANGELOG.md
-Update it after each development task with a human-readable description of what changed.
-Don't list individual commits. Skip entries for trivial or non-user-facing changes that don't affect app behavior.
+Global rules from `~/.claude/CLAUDE.md` (changelog, development journal, git config, code style, commit/rebase workflow) also apply — do not duplicate them here.
 
-# Development Journal
-Maintain a file at .github/development-journal.md containing:
-- Software Stack Information
-- Key Decisions (context and rationale to keep in mind for future work)
-- Core Features
+## What this is
 
-# Git Configuration Rules
-All git operations are performed on behalf of the user. Before any git operation, configure:
-- user.name = c0dev0id
-- user.email = sh+git@codevoid.de
+`sprov` is a Python CLI that reads a YAML spec describing a Linux storage topology (partitions, RAID, LUKS, LVM, filesystems, swap) and provisions it against live block devices. Target environment is a Debian-based rescue/installer (including debian-installer via a `-udeb` variant).
 
-Never add Co-Authored-By or any other personal attribution to commits or pull requests.
+Two output modes share one implementation:
+- **Live executor** — runs commands directly against the system.
+- **`--script`** — emits a busybox/dash-compatible POSIX shell script that produces the same end state.
 
-Remove all lines that contain the word "claude" from pull request and commit messages.
+## Commands
 
-If a .gh_token file is present, use the token to access GitHub and read CI/CD workflow results.
+Development-loop commands (Python is invoked via `python3` — respect the venv rule in the global file when installing anything):
 
-# Build Constraints
-Do not attempt to build Android projects locally. All builds are handled by CI/CD.
-AGP cannot be accessed due to firewall restrictions. Do not try to work around this.
+```sh
+make check                            # pytest tests/ (unit tests only by default)
+make lint                             # pylint storage/ && mypy --strict storage/
+make all                              # substitutes @PYTHON@/@VERSION@ into bin/sprov and doc/sprov.8
+make clean
 
-# Code Style
-- KISS — Keep it Simple, Stupid.
-- Write testable code.
-- Write unit tests that verify assumptions and cover edge cases.
-- No database or schema migration code during development (version < 1.0.0).
+python3 -m pytest tests/unit -q                       # unit tests
+python3 -m pytest tests/unit/test_executor_topo.py    # single file
+python3 -m pytest tests/unit -k mount_order           # single test by expression
+python3 -m pytest tests/integration --run-integration # integration; Linux + privileged + loop devices only
+```
 
-# Library and Framework Usage
-- Always use the latest version available.
-- Before implementing a feature from scratch, check whether the libraries and frameworks already in use provide built-in support for it — possibly in a different form than the user requested. If so, explain the available capabilities and let the user decide how to adjust the request.
-  - Example: The user asks for a specific animation that would require a custom implementation, but the UI framework already provides a set of built-in animations. Present those options and let the user choose.
+Integration tests are skipped unless `--run-integration` is passed or `INTEGRATION=1` is set. They **cannot run on the OpenBSD dev box** — they need `losetup -P`, udev, and privileged Linux. CI runs them in a `debian:trixie-slim --privileged` container; locally they only run under the same conditions.
 
-# Communication Standards
-- Be clear, direct, and evidence-based.
-- Push back when something seems wrong or suboptimal.
-- If the user uses imprecise terminology, provide the correct term.
+Running the CLI without installing:
 
-# Finding Solutions
-- Don't jump to conclusions. If there's any ambiguity, ask for clarification first.
-- The obvious fix is often not the right one. Approach problems from multiple angles:
-  - Consider whether a design pattern would prevent recurring issues.
-  - Evaluate whether a different library, technique, or component is a better fit than working around limitations of the current approach.
-  - Step back and examine the architecture — the root cause may point to a structural improvement rather than a local patch.
+```sh
+make all
+PYTHONPATH="$PWD" ./sprov --dry-run tests/data/example.yaml
+PYTHONPATH="$PWD" ./sprov --script  tests/data/example.yaml > /tmp/out.sh
+```
 
-# About the User (Target Group Definition)
-- The user is a minimalist who values performance, low latency and over feature richness.
-- The user prefers clean software architecture and technical correctness and will adapt workflow or feature expectations to fit the software stack rather than accept complex code or workarounds.
-- The user may not be aware of all capabilities offered by the libraries and frameworks in use.
+## Architecture
 
+### Node contract (`storage/base.py`)
+
+Every storage operation is a `Node` subclass with a small uniform surface:
+
+- `validate()` — field checks; raise `NodeValidationError`.
+- `command_lines() -> list[ShellCommand]` — the canonical list of shell operations. **This is the single source of truth consumed by both the live `Executor` and the `ScriptGenerator`.** Break this invariant and generated scripts silently diverge from live runs. If a node needs runtime-derived state that the script generator can't know, override `execute()` and return `[]` from `command_lines()` (the node will simply be absent from generated scripts — do this deliberately).
+- `_post_execute()` — register cleanup closures via `register_cleanup()`; the `Executor` invokes them in reverse order on failure.
+- `device_path() -> str | None` — block device this node produces (consumed by children).
+
+`ShellCommand` (dataclass) carries `argv`, optional `stdin` bytes (secrets **must** go on stdin, never argv, so they don't appear in `/proc/<pid>/cmdline`), an optional `comment`, and a `check` flag.
+
+### Pipeline (`storage/spec.py` → `storage/executor.py`)
+
+1. `load_spec()` — YAML → dict → variable expansion (`{{name}}` walks every leaf string) → instantiate nodes via `TYPE_REGISTRY`. Exactly one `control` entry is required and produces `Context.control_path`.
+2. `Executor.prepare()`:
+   - Resolve parent refs.
+   - Assign per-parent partition indices in **YAML source order** (not topo order — partition index == appearance order) and compute MiB-cursor offsets.
+   - Topological sort: Kahn's algorithm with a **min-heap keyed by original source index**. Order is deterministic; this is what makes the `tests/data/example.sh.golden` golden-file test meaningful.
+   - Mount reordering post-pass: `FilesystemNode`s are stable-sorted to the tail by mountpoint depth so `/` mounts before `/boot` before `/boot/efi`. Filesystems produce no `device_path()`, so pulling them to the tail never breaks a data dependency.
+   - Call `validate()` on every node.
+3. `Executor.run()` — execute in order; on failure, invoke registered cleanup closures on succeeded nodes in reverse order and raise `NodeExecutionError`.
+
+### Adding a new node type
+
+1. Add a module under `storage/` implementing the `Node` contract.
+2. Register in `TYPE_REGISTRY` in `storage/spec.py`.
+3. Emit `ShellCommand` records from `command_lines()` — don't reach into `subprocess` yourself; the `SystemCommand` wrapper in `execute()` handles logging, dry-run, and stdin plumbing.
+4. Unit test: pure-logic tests in `tests/unit/`. If it touches real devices, add an integration test in `tests/integration/` gated by the `integration` marker.
+5. Regenerate the golden file if the example spec exercises the new type: `PYTHONPATH="$PWD" ./sprov --script tests/data/example.yaml > tests/data/example.sh.golden` — commit as its own change and inspect the diff.
+
+### Non-obvious invariants (bite you if you don't know)
+
+- **Container/udev races (see development journal for the full story):**
+  - Adding a partition: use `partx -a -n N:N` (single `BLKPG_ADD_PARTITION` for the new partition only). **Never `partx -u`** — it fires `BLKPG_UPD_PARTITION` for every existing partition, which under a privileged container's own udevd re-creates each partition node and can race concurrent `mkfs`/`pvcreate` calls to `ENXIO`.
+  - LVM in privileged containers: `lvcreate -an` (inactive) → `lvchange -ay` (activate) → `vgmknodes` (create device nodes). Skipping the split lets `lvcreate` try to zero a phantom DM device before udev has set the node up.
+- **PyYAML 1.1 bool quirk:** `yes`/`no` unquoted parse as Python booleans. Fields like `overwrite: "yes"` are strings on purpose; helpers coerce both forms.
+- **Secrets:** always via `ShellCommand.stdin` bytes. `ScriptGenerator` emits `cmd <<'SPROV_STDIN_EOF'`; a payload line equal to the marker aborts emission by design.
+- **Size sentinel:** `parse_size("{max}")` returns the literal `"MAX"` (typed `Literal["MAX"]`, not an `int`). Callers must handle it before doing integer math. In partitions, `size: {max}` terminates the MiB cursor chain and any following partition in the same parent is invalid.
+- **Python 3.11+** only. Code uses PEP 604 unions (`X | Y`) and relies on `from __future__ import annotations`.
+
+## Testing conventions
+
+- **Unit tests** are pure-logic and portable — they run on OpenBSD and in CI. They cover node validation, executor topology, mount ordering, size parsing, script generation, templating, and system-command behaviour.
+- **Integration tests** exercise real Linux subsystems (loop devices, mdadm, LVM, LUKS, filesystems) via the fixtures in `tests/integration/conftest.py`. Marked `integration` and gated by `--run-integration` / `INTEGRATION=1`.
+- **Golden-file test** at `tests/data/example.sh.golden` is the drift detector between YAML → generated script. It's the reason the topo sort has to be stable. Any intentional change to command construction requires regenerating and committing the golden.
+- The dev flow is: write unit + golden coverage on OpenBSD; rely on CI's privileged Debian container for integration signal.
+
+## CI (`.github/workflows/ci.yml`)
+
+Six jobs on push/PR to main: `lint` (pylint + mypy --strict), `unit` (matrix 3.11/3.12/3.13 + coverage), `scriptgen-shellcheck` (shellcheck under dash), `build-packages` (dpkg-buildpackage in debian:trixie-slim + lintian), `integration` (privileged debian:trixie-slim consuming the built `.deb`), and `release` (tag-triggered, uploads the `.deb` and `.udeb` to a GitHub Release).
+
+## Packaging
+
+`debian/` produces two binaries from one native (`3.0 (native)`) source: `sprov` (full deps + man page) and `sprov-udeb` (stripped for debian-installer, depends on `-udeb` counterparts of `parted`, `mdadm`, `cryptsetup-bin`, `lvm2`, etc.). Version comes from `debian/changelog` and is substituted into `doc/sprov.8` via the Makefile.
