@@ -142,7 +142,6 @@ jobs:
           udevadm control --reload-rules
           udevadm trigger
           udevadm settle --timeout=10
-          pgrep -a systemd-udevd
       - name: Probe partition-node materialization
         run: |
           set -x
