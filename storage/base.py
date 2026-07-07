@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from typing import Any, Callable, ClassVar
 
@@ -32,6 +33,29 @@ class NodeValidationError(ValueError):
 
 class NodeExecutionError(RuntimeError):
     """Raised when a node fails to execute."""
+
+
+_TRUE_STRINGS = frozenset({"yes", "true", "on", "1"})
+_FALSE_STRINGS = frozenset({"no", "false", "off", "0"})
+
+
+def _as_bool(value: Any, *, field_name: str) -> bool:
+    """Accept YAML native bool or the quoted string variants.
+
+    YAML 1.1's `yes`/`no`/`on`/`off` parse as bool when unquoted; the string
+    forms only appear when the user quoted them. Anything else is an error.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        s = value.strip().lower()
+        if s in _TRUE_STRINGS:
+            return True
+        if s in _FALSE_STRINGS:
+            return False
+    raise NodeValidationError(
+        f"{field_name} must be a boolean, got {value!r}"
+    )
 
 
 @dataclass
@@ -79,6 +103,10 @@ class Node:
         self.raw: dict[str, Any] = raw
         self.ctx: Context = ctx
         self.parents: list[str] = normalize_parents(raw.get("parents"))
+        self.ignore_errors: bool = _as_bool(
+            raw.get("ignore_errors", False),
+            field_name=f"{self.TYPE} id={self.id}: ignore_errors",
+        )
         self._resolved_parents: list[Node] = []
         self._cleanup_actions: list[Callable[[], None]] = []
 
@@ -90,8 +118,8 @@ class Node:
         """Validate fields; raise NodeValidationError on bad input."""
 
     def execute(self) -> None:
-        """Run command_lines() then call _post_execute() for cleanup registration."""
-        for cmd in self.command_lines():
+        """Run effective_command_lines() then call _post_execute() for cleanup registration."""
+        for cmd in self.effective_command_lines():
             self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
         self._post_execute()
 
@@ -109,6 +137,19 @@ class Node:
         runtime-derived state may override execute() directly and return [].
         """
         return []
+
+    def effective_command_lines(self) -> list[ShellCommand]:
+        """Return command_lines() with ignore_errors applied to `check`.
+
+        Both Executor and ScriptGenerator consume this. When ignore_errors
+        is set, every ShellCommand is rewritten with check=False so that
+        SystemCommand.run() will not raise and the emitted script appends
+        `|| true` to each command.
+        """
+        cmds = self.command_lines()
+        if not self.ignore_errors:
+            return cmds
+        return [dataclasses.replace(c, check=False) for c in cmds]
 
     # ------------------------------------------------------------
     # Helpers.

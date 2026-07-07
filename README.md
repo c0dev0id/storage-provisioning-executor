@@ -74,6 +74,10 @@ storage:
 Every node except `control` and `hardware` must declare `parents` (a string
 or list of node `id` values).
 
+Any node may set `ignore_errors: true` to swallow failures during its own
+commands. In live mode, non-zero exit codes are ignored; in `--script`
+mode, each emitted command gets `|| true` appended.
+
 ### Hardware Node
 
 ```yaml

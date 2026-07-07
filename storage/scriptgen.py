@@ -32,7 +32,7 @@ class ScriptGenerator:
         """Return the full script as a single string ending in a newline."""
         parts: list[str] = [_HEADER.rstrip("\n")]
         for node in self.nodes:
-            cmds = node.command_lines()
+            cmds = node.effective_command_lines()
             if not cmds:
                 continue
             parts.append("")
