@@ -7,7 +7,7 @@ from typing import Any, Callable, ClassVar
 
 import pytest
 
-from storage.base import Context, Node, NodeExecutionError
+from storage.base import Context, Node, NodeExecutionError, ShellCommand
 
 
 class _Recorder(Node):
@@ -141,8 +141,7 @@ class _RecorderWithVerify(_Recorder):
         super().__init__(raw, ctx, log=log)
         self._verify_argv = verify_argv
 
-    def verify_command_lines(self):  # type: ignore[no-untyped-def]
-        from storage.base import ShellCommand
+    def verify_command_lines(self) -> list[ShellCommand]:
         return [ShellCommand(argv=self._verify_argv, comment="verify stub")]
 
 
@@ -180,7 +179,7 @@ def test_verify_failure_triggers_cleanup_and_raises() -> None:
         verify_argv=["mountpoint", "-q", "/target/boot"],
     )
 
-    def fake_run(argv, **_kwargs):  # type: ignore[no-untyped-def]
+    def fake_run(argv: list[str], **_kwargs: Any) -> None:
         raise SystemCommandError(CommandResult(cmd=argv, rc=32, stderr="not mounted"))
 
     with patch.object(ctx.sys, "run", side_effect=fake_run):

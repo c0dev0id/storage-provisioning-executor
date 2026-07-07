@@ -123,6 +123,16 @@ class Node:
             self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
         self._post_execute()
 
+    def verify(self) -> None:
+        """Run effective_verify_command_lines() against ctx.sys.
+
+        Called after every node has executed successfully. Runs through the
+        same SystemCommand path as execute() so dry-run, logging, and stdin
+        handling all behave identically.
+        """
+        for cmd in self.effective_verify_command_lines():
+            self.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+
     def _post_execute(self) -> None:
         """Override to register cleanup actions after commands complete."""
 
@@ -138,30 +148,21 @@ class Node:
         """
         return []
 
-    def effective_command_lines(self) -> list[ShellCommand]:
-        """Return command_lines() with ignore_errors applied to `check`.
-
-        Both Executor and ScriptGenerator consume this. When ignore_errors
-        is set, every ShellCommand is rewritten with check=False so that
-        SystemCommand.run() will not raise and the emitted script appends
-        `|| true` to each command.
-        """
-        cmds = self.command_lines()
-        if not self.ignore_errors:
-            return cmds
-        return [dataclasses.replace(c, check=False) for c in cmds]
-
     def verify_command_lines(self) -> list[ShellCommand]:
         """Return post-provisioning verification commands for this node.
 
-        Runs after every node has executed successfully. Default is no-op;
-        FilesystemNode overrides to check that its mountpoint is mounted.
+        Default is no-op; override to add checks that must hold after every
+        node has run (e.g. FilesystemNode checks its mountpoint is mounted).
         """
         return []
 
+    def effective_command_lines(self) -> list[ShellCommand]:
+        return self._apply_ignore(self.command_lines())
+
     def effective_verify_command_lines(self) -> list[ShellCommand]:
-        """verify_command_lines() with ignore_errors applied to `check`."""
-        cmds = self.verify_command_lines()
+        return self._apply_ignore(self.verify_command_lines())
+
+    def _apply_ignore(self, cmds: list[ShellCommand]) -> list[ShellCommand]:
         if not self.ignore_errors:
             return cmds
         return [dataclasses.replace(c, check=False) for c in cmds]

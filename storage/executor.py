@@ -155,12 +155,10 @@ class Executor:
             self._cleanup()
             raise NodeExecutionError(f"node {cid!r}: {exc}") from exc
 
-        current = None
         try:
             for node in ordered:
-                for cmd in node.effective_verify_command_lines():
-                    current = node
-                    node.ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
+                current = node
+                node.verify()
         except Exception as exc:
             cid = current.id if current is not None else "?"
             _logger.error("post-run verification failed at node %r: %s", cid, exc)
