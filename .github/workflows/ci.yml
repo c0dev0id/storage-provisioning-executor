@@ -134,11 +134,15 @@ jobs:
       - name: Start udev daemon
         run: |
           set -x
-          udevd --daemon
+          # Debian's udev binary is systemd-udevd (usrmerge means both
+          # /lib and /usr/lib work). Note: with devtmpfs mounted at /dev
+          # the kernel already creates block-device nodes; udev is here
+          # for rules/symlinks/permissions to match real Debian behavior.
+          /lib/systemd/systemd-udevd --daemon
           udevadm control --reload-rules
           udevadm trigger
           udevadm settle --timeout=10
-          pgrep -a udevd
+          pgrep -a systemd-udevd
       - name: Probe partition-node materialization
         run: |
           set -x
