@@ -7,7 +7,7 @@ from typing import Any, Type
 
 import yaml
 
-from storage.base import Context, Node, NodeValidationError
+from storage.base import Context, Node, NodeValidationError, normalize_modules
 from storage.crypt import CryptLuksNode
 from storage.filesystem import FilesystemNode
 from storage.hardware import HardwareNode
@@ -74,6 +74,7 @@ def load_spec(
     ctx = Context(
         variables=variables,
         control_path=str(control.get("path", "/target")),
+        modules=normalize_modules(control.get("modules"), where="control"),
     )
     if ctx_overrides:
         for key, value in ctx_overrides.items():

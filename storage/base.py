@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import dataclasses
 from dataclasses import dataclass, field
-from typing import Any, Callable, ClassVar
+from typing import Any, Callable, ClassVar, Iterable
 
 from storage.system import SystemCommand
 
@@ -67,6 +67,7 @@ class Context:
     dry_run: bool = False
     verbosity: int = 1
     sys: SystemCommand = field(default_factory=SystemCommand)
+    modules: list[str] = field(default_factory=list)
 
 
 def normalize_parents(raw: Any) -> list[str]:
@@ -91,6 +92,36 @@ def normalize_parents(raw: Any) -> list[str]:
     )
 
 
+def normalize_modules(raw: Any, *, where: str) -> list[str]:
+    """Normalize a `modules:` field to a list of module names.
+
+    Accepts None (→ []), str (→ [str]), or list[str] (→ copy). Empty and
+    whitespace-only entries are rejected.
+    """
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        items = [raw]
+    elif isinstance(raw, list):
+        items = []
+        for item in raw:
+            if not isinstance(item, str):
+                raise NodeValidationError(
+                    f"{where}: modules entries must be strings, "
+                    f"got {type(item).__name__}: {item!r}"
+                )
+            items.append(item)
+    else:
+        raise NodeValidationError(
+            f"{where}: modules must be string or list, "
+            f"got {type(raw).__name__}: {raw!r}"
+        )
+    for item in items:
+        if not item.strip():
+            raise NodeValidationError(f"{where}: modules entry is empty")
+    return items
+
+
 class Node:
     """Abstract base for every storage graph node."""
 
@@ -106,6 +137,10 @@ class Node:
         self.ignore_errors: bool = _as_bool(
             raw.get("ignore_errors", False),
             field_name=f"{self.TYPE} id={self.id}: ignore_errors",
+        )
+        self.modules: list[str] = normalize_modules(
+            raw.get("modules"),
+            where=f"{self.TYPE} id={self.id}",
         )
         self._resolved_parents: list[Node] = []
         self._cleanup_actions: list[Callable[[], None]] = []
@@ -184,3 +219,33 @@ class Node:
 
     def __repr__(self) -> str:
         return f"<{self.__class__.__name__} id={self.id!r}>"
+
+
+def collect_modprobe_commands(
+    ctx: Context, nodes: Iterable[Node]
+) -> list[ShellCommand]:
+    """Aggregate ctx.modules + per-node modules into deduped modprobe commands.
+
+    Order: control-level modules first (spec order), then each node's modules
+    in DAG-execution order. Duplicates are dropped on second appearance so an
+    operator can safely repeat a module on every node that needs it without
+    producing duplicate `modprobe` lines.
+    """
+    seen: set[str] = set()
+    result: list[ShellCommand] = []
+    for name in ctx.modules:
+        if name in seen:
+            continue
+        seen.add(name)
+        result.append(ShellCommand(
+            argv=["modprobe", name], comment=f"load kernel module {name}",
+        ))
+    for node in nodes:
+        for name in node.modules:
+            if name in seen:
+                continue
+            seen.add(name)
+            result.append(ShellCommand(
+                argv=["modprobe", name], comment=f"load kernel module {name}",
+            ))
+    return result

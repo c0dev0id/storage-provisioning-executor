@@ -83,6 +83,32 @@ Any node may set `ignore_errors: true` to swallow failures during its own
 commands. In live mode, non-zero exit codes are ignored; in `--script`
 mode, each emitted command gets `|| true` appended.
 
+### Kernel Modules
+
+Both the `control` entry and any storage node may declare a `modules:` list
+of kernel modules to load. `sprov` aggregates every declared module, dedupes
+in first-appearance order, and runs `modprobe` for each **before any storage
+operation begins** — same in live and `--script` mode. In generated scripts
+the calls appear in a `# === modules ===` block at the top.
+
+Per-node `modules:` are for portability: a `dm-crypt-luks` node can carry
+`dm_crypt` with itself, so moving the node to another spec file doesn't
+require chasing which modules it depends on. Control-level `modules:` are
+for storage-stack essentials shared by many nodes (`dm_mod`, `ext4`, …).
+
+```yaml
+- type: control
+  path: /target
+  modules:
+    - dm_mod
+
+- type: dm-crypt-luks
+  id: crypt-root
+  parents: lvm-lv-c_root
+  modules:
+    - dm_crypt
+```
+
 ### Hardware Node
 
 ```yaml

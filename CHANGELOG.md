@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Kernel-module declarations: both the `control` entry and any storage node accept a `modules: [...]` list. `sprov` aggregates every declared module, dedupes in first-appearance order, and runs `modprobe` for each before any storage operation starts. In `--script` mode the calls appear in a `# === modules ===` block at the top. Per-node declarations let node definitions travel between spec files without losing their kernel-module dependencies.
 - New `swap` node type: `mkswap` + `swapon` a block device, with optional label and extra `mkswap_options`. Cleanup on failure runs `swapoff`. No mountpoint field — swap space is not a mounted filesystem.
 - Per-node `ignore_errors: true` flag: swallow failures of the node's own commands in both live and `--script` modes (the emitted script appends `|| true` to each command in the block).
 - Post-provisioning mount verification: after every node runs, sprov checks that each `filesystem` node's mountpoint is actually a mountpoint (`mountpoint -q <path>`). A failed check triggers reverse cleanup and a non-zero exit, so a silently-missing mount can no longer masquerade as success. The generated shell script emits the same checks in a `# === verify ===` block at the end.

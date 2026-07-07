@@ -3,6 +3,8 @@ vars:
 storage:
   - type: "control"
     path: "/target"
+    modules:
+      - dm_mod
 
   - type: "hardware"
     id: "hw-sda"
@@ -52,6 +54,8 @@ storage:
   - type: "dm-crypt-luks"
     id: "crypt-root"
     parents: "lvm-lv-c_root"
+    modules:
+      - dm_crypt
     key:
       slot: 3
       passphrase: "1234"
@@ -113,6 +117,8 @@ storage:
   - type: "raid1"
     id: "nvme-softraid"
     parents: ["part-ssd1", "part-ssd2"]
+    modules:
+      - raid1
     name: "md128"
 
   - type: "filesystem"

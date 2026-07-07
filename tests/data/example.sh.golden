@@ -7,6 +7,14 @@
 # Heredoc bodies (passphrases) are not printed by -x.
 set -eux
 
+# === modules ===
+# load kernel module dm_mod
+modprobe dm_mod
+# load kernel module dm_crypt
+modprobe dm_crypt
+# load kernel module raid1
+modprobe raid1
+
 # === hw-sda (hardware) ===
 # create gpt partition table on /dev/sda
 parted -s /dev/sda mklabel gpt

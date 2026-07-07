@@ -6,7 +6,7 @@ from __future__ import annotations
 import shlex
 from typing import Iterable
 
-from storage.base import Node, ShellCommand
+from storage.base import Node, ShellCommand, collect_modprobe_commands
 
 
 _EOF_MARKER = "SPROV_STDIN_EOF"
@@ -31,6 +31,13 @@ class ScriptGenerator:
     def emit(self) -> str:
         """Return the full script as a single string ending in a newline."""
         parts: list[str] = [_HEADER.rstrip("\n")]
+        if self.nodes:
+            module_cmds = collect_modprobe_commands(self.nodes[0].ctx, self.nodes)
+            if module_cmds:
+                parts.append("")
+                parts.append("# === modules ===")
+                for cmd in module_cmds:
+                    parts.append(_render_command(cmd))
         for node in self.nodes:
             cmds = node.effective_command_lines()
             if not cmds:

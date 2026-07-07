@@ -9,7 +9,12 @@ import logging
 import posixpath
 from typing import Iterable
 
-from storage.base import Node, NodeExecutionError, NodeValidationError
+from storage.base import (
+    Node,
+    NodeExecutionError,
+    NodeValidationError,
+    collect_modprobe_commands,
+)
 from storage.filesystem import FilesystemNode
 from storage.partition import PartitionNode
 from storage.system import SIZE_MAX, parse_size
@@ -143,6 +148,10 @@ class Executor:
         """Execute nodes in order; on failure, reverse-cleanup succeeded nodes."""
         ordered = self.prepare()
         self._succeeded = []
+        ctx = ordered[0].ctx if ordered else None
+        if ctx is not None:
+            for cmd in collect_modprobe_commands(ctx, ordered):
+                ctx.sys.run(cmd.argv, stdin=cmd.stdin, check=cmd.check)
         current: Node | None = None
         try:
             for node in ordered:
