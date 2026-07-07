@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - New `swap` node type: `mkswap` + `swapon` a block device, with optional label and extra `mkswap_options`. Cleanup on failure runs `swapoff`. No mountpoint field — swap space is not a mounted filesystem.
+- Per-node `ignore_errors: true` flag: swallow failures of the node's own commands in both live and `--script` modes (the emitted script appends `|| true` to each command in the block).
 - User-facing `README.md` covering installation, spec format, all node types, CLI options, exit codes, and shell script mode.
 - Original implementation brief moved to `doc/project-specification.md` for contributor reference.
+
+### Changed
+- Generated shell script now runs under `set -eux` so dash traces each command to stderr before executing it. Heredoc bodies (LUKS passphrases) are not printed by `-x`.
+- `mkfs.ext2/ext3/ext4`, `mkfs.xfs`, and `mkfs.btrfs` are now invoked with `-q` to suppress progress banners. `mkfs.vfat` is untouched (no `-q` flag, silent by default in dosfstools 4.x).
 
 ## [0.1.1] - 2026-04-20
 
