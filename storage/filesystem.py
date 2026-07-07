@@ -14,7 +14,7 @@ _logger = logging.getLogger("sprov")
 
 
 def _mkfs_ext4(dev: str, label: str | None, options: list[str]) -> list[str]:
-    argv: list[str] = ["mkfs.ext4", "-F"]
+    argv: list[str] = ["mkfs.ext4", "-F", "-q"]
     if label is not None:
         argv.extend(["-L", label])
     argv.extend(options)
@@ -23,7 +23,7 @@ def _mkfs_ext4(dev: str, label: str | None, options: list[str]) -> list[str]:
 
 
 def _mkfs_ext2(dev: str, label: str | None, options: list[str]) -> list[str]:
-    argv: list[str] = ["mkfs.ext2", "-F"]
+    argv: list[str] = ["mkfs.ext2", "-F", "-q"]
     if label is not None:
         argv.extend(["-L", label])
     argv.extend(options)
@@ -32,7 +32,7 @@ def _mkfs_ext2(dev: str, label: str | None, options: list[str]) -> list[str]:
 
 
 def _mkfs_ext3(dev: str, label: str | None, options: list[str]) -> list[str]:
-    argv: list[str] = ["mkfs.ext3", "-F"]
+    argv: list[str] = ["mkfs.ext3", "-F", "-q"]
     if label is not None:
         argv.extend(["-L", label])
     argv.extend(options)
@@ -41,7 +41,7 @@ def _mkfs_ext3(dev: str, label: str | None, options: list[str]) -> list[str]:
 
 
 def _mkfs_xfs(dev: str, label: str | None, options: list[str]) -> list[str]:
-    argv: list[str] = ["mkfs.xfs", "-f"]
+    argv: list[str] = ["mkfs.xfs", "-f", "-q"]
     if label is not None:
         argv.extend(["-L", label])
     argv.extend(options)
@@ -50,7 +50,7 @@ def _mkfs_xfs(dev: str, label: str | None, options: list[str]) -> list[str]:
 
 
 def _mkfs_btrfs(dev: str, label: str | None, options: list[str]) -> list[str]:
-    argv: list[str] = ["mkfs.btrfs", "-f"]
+    argv: list[str] = ["mkfs.btrfs", "-f", "-q"]
     if label is not None:
         argv.extend(["-L", label])
     argv.extend(options)

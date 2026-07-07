@@ -93,7 +93,7 @@ def test_command_lines_ext4_with_label() -> None:
     )
     fs._resolved_parents = [_hw("/dev/sda1")]
     cmds = fs.command_lines()
-    assert cmds[0].argv == ["mkfs.ext4", "-F", "-L", "foo-root", "/dev/sda1"]
+    assert cmds[0].argv == ["mkfs.ext4", "-F", "-q", "-L", "foo-root", "/dev/sda1"]
     assert cmds[1].argv == ["mkdir", "-p", "/target"]
     assert cmds[2].argv == ["mount", "/dev/sda1", "/target"]
 
@@ -111,7 +111,7 @@ def test_command_lines_xfs() -> None:
     )
     fs._resolved_parents = [_hw("/dev/md128")]
     cmds = fs.command_lines()
-    assert cmds[0].argv == ["mkfs.xfs", "-f", "-L", "ssdraid", "/dev/md128"]
+    assert cmds[0].argv == ["mkfs.xfs", "-f", "-q", "-L", "ssdraid", "/dev/md128"]
 
 
 def test_command_lines_fat32_label_uppercased(
@@ -147,7 +147,7 @@ def test_command_lines_fat32_long_label_truncated() -> None:
     )
     fs._resolved_parents = [_hw("/dev/sda1")]
     cmds = fs.command_lines()
-    label = cmds[0].argv[4]
+    label = cmds[0].argv[4]  # mkfs.vfat has no -q, so label is still at index 4
     assert len(label) == 11
     assert label == "THIS-LABEL-"
 
@@ -173,7 +173,7 @@ def test_mkfs_options_appended() -> None:
     fs._resolved_parents = [_hw("/dev/sda1")]
     cmds = fs.command_lines()
     assert cmds[0].argv == [
-        "mkfs.ext4", "-F", "-L", "root", "-E", "lazy_itable_init=0", "/dev/sda1",
+        "mkfs.ext4", "-F", "-q", "-L", "root", "-E", "lazy_itable_init=0", "/dev/sda1",
     ]
 
 

@@ -101,7 +101,7 @@ mdadm --create --verbose --run --force --assume-clean --metadata=1.2 --level=1 -
 
 # === fs-root (filesystem) ===
 # create ext4 on /dev/mapper/crypt-root
-mkfs.ext4 -F -L foo-root /dev/mapper/crypt-root
+mkfs.ext4 -F -q -L foo-root /dev/mapper/crypt-root
 # ensure mountpoint /target
 mkdir -p /target
 # mount /dev/mapper/crypt-root at /target
@@ -109,7 +109,7 @@ mount /dev/mapper/crypt-root /target
 
 # === fs-boot (filesystem) ===
 # create ext4 on /dev/sda2
-mkfs.ext4 -F -L foo-boot /dev/sda2
+mkfs.ext4 -F -q -L foo-boot /dev/sda2
 # ensure mountpoint /target/boot
 mkdir -p /target/boot
 # mount /dev/sda2 at /target/boot
@@ -117,7 +117,7 @@ mount /dev/sda2 /target/boot
 
 # === xfs-softraid (filesystem) ===
 # create xfs on /dev/md128
-mkfs.xfs -f -L ssdraid /dev/md128
+mkfs.xfs -f -q -L ssdraid /dev/md128
 # ensure mountpoint /target/srv
 mkdir -p /target/srv
 # mount /dev/md128 at /target/srv
