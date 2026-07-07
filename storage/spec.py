@@ -8,6 +8,7 @@ from typing import Any, Type
 import yaml
 
 from storage.base import Context, Node, NodeValidationError, normalize_modules
+from storage.command import CommandNode, DebugNode
 from storage.crypt import CryptLuksNode
 from storage.filesystem import FilesystemNode
 from storage.hardware import HardwareNode
@@ -28,6 +29,8 @@ TYPE_REGISTRY: dict[str, Type[Node]] = {
     "lvm-lv": LvmLvNode,
     "filesystem": FilesystemNode,
     "swap": SwapNode,
+    "command": CommandNode,
+    "debug": DebugNode,
 }
 
 

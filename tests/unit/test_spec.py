@@ -99,6 +99,7 @@ def test_type_registry_contains_all_node_types() -> None:
     expected = {
         "hardware", "partition", "raid1", "dm-crypt-luks",
         "lvm-pv", "lvm-vg", "lvm-lv", "filesystem", "swap",
+        "command", "debug",
     }
     assert set(TYPE_REGISTRY) == expected
 

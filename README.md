@@ -75,6 +75,9 @@ storage:
 | `lvm-lv` | LVM logical volume |
 | `dm-crypt-luks` | LUKS-encrypted block device |
 | `filesystem` | Formats and mounts a block device |
+| `swap` | `mkswap` + `swapon` a block device |
+| `command` | Runs an arbitrary argv as a fence in the DAG |
+| `debug` | Prints a message (`echo`) at a chosen fence point |
 
 Every node except `control` and `hardware` must declare `parents` (a string
 or list of node `id` values).
@@ -155,6 +158,36 @@ for storage-stack essentials shared by many nodes (`dm_mod`, `ext4`, …).
   key:
     slot: 3
     passphrase: "secret"
+```
+
+### Command Node
+
+Escape hatch for storage layers `sprov` doesn't natively model (btrfs
+subvolumes, ZFS pools, …). Runs an arbitrary argv at whatever DAG position
+its `parents` place it in. Produces no `device_path`, so it's a leaf or a
+fence between other nodes — never a source for children that need a device.
+No shell interpretation: use `argv: [sh, -c, "..."]` explicitly if you want
+a shell.
+
+```yaml
+- type: command
+  id: settle-after-parts
+  parents: [hw-sda]
+  argv: [udevadm, settle]
+  comment: "wait for partition nodes"     # optional
+```
+
+### Debug Node
+
+Sugar for printing a message at a fence point (implemented as `echo`).
+Useful for tracing an installer run without hand-rolling `argv: [echo, ...]`
+everywhere. Combine with `ignore_errors: true` if it must never abort.
+
+```yaml
+- type: debug
+  id: mark-fs-ready
+  parents: [fs-root]
+  message: "root filesystem mounted"
 ```
 
 ## CLI Reference

@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- New `command` node type: runs an arbitrary `argv: [...]` as a fence in the DAG. No shell interpretation; use `argv: [sh, -c, "..."]` explicitly if you want one. Produces no device path, so it's a leaf or a fence between other nodes — ordering is expressed via `parents` like every other node. Intended as an escape hatch for storage layers sprov doesn't natively model (btrfs subvolumes, ZFS pools, …).
+- New `debug` node type: sugar for printing a message at a fence point. Takes a single `message: "..."` string, implemented as `echo`. Distinct type kept for spec readability — `type: debug` reads clearer than `argv: [echo, ...]`.
 - Kernel-module declarations: both the `control` entry and any storage node accept a `modules: [...]` list. `sprov` aggregates every declared module, dedupes in first-appearance order, and runs `modprobe` for each before any storage operation starts. In `--script` mode the calls appear in a `# === modules ===` block at the top. Per-node declarations let node definitions travel between spec files without losing their kernel-module dependencies.
 - New `swap` node type: `mkswap` + `swapon` a block device, with optional label and extra `mkswap_options`. Cleanup on failure runs `swapoff`. No mountpoint field — swap space is not a mounted filesystem.
 - Per-node `ignore_errors: true` flag: swallow failures of the node's own commands in both live and `--script` modes (the emitted script appends `|| true` to each command in the block).

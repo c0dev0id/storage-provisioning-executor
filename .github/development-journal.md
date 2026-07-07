@@ -64,7 +64,7 @@
 - **Dry-run mode (`--dry-run`):** log every command, never fork.
 - **Variable expansion (`{{var}}`):** walks every leaf string in the parsed YAML tree before node instantiation; undefined variable → `KeyError`.
 - **Node contract:** `validate()` / `execute()` / `device_path()` / `command_lines()` / `verify_command_lines()` / `register_cleanup()`. Uniform surface across all node types keeps executor and scriptgen simple. `verify_command_lines()` runs after every node has executed successfully — currently only `FilesystemNode` overrides it, with a `mountpoint -q` check per mount.
-- **Node types:** `hardware`, `partition`, `lvm-pv`, `lvm-vg`, `lvm-lv`, `raid1`, `dm-crypt-luks`, `filesystem`, `swap`.
+- **Node types:** `hardware`, `partition`, `lvm-pv`, `lvm-vg`, `lvm-lv`, `raid1`, `dm-crypt-luks`, `filesystem`, `swap`, `command`, `debug`.
 - **Per-node `ignore_errors`:** wraps `command_lines()` via `Node.effective_command_lines()` — the single point where the flag is applied — so live executor and script generator stay in sync (live: `check=False`; script: `|| true` suffix).
 - **Kernel-module loading:** `modules: [...]` on `control` and/or any node; aggregated + deduped by `collect_modprobe_commands()` and emitted before any node's own commands, so both live and `--script` modes load prerequisites up-front.
 - **Man page (`sprov(8)`):** mdoc-formatted, `@VERSION@` substituted from the Debian changelog at build time.
