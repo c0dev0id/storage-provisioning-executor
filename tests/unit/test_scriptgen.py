@@ -20,7 +20,7 @@ def test_emit_header_and_shebang() -> None:
     sg = ScriptGenerator([])
     out = sg.emit()
     assert out.startswith("#!/bin/sh\n")
-    assert "set -eu" in out
+    assert "set -eux" in out
 
 
 def test_render_command_basic_argv() -> None:
