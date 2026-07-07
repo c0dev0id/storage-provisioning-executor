@@ -123,11 +123,32 @@ jobs:
           apt-get install -y --no-install-recommends \
             python3-pytest util-linux kmod udev
           apt-get install -y ./dist/sprov_*.deb
+      - name: Ensure devtmpfs at /dev (kernel populates block-device nodes)
+        run: |
+          set -x
+          mount | grep " /dev " || true
+          if ! mount | grep -q "on /dev type devtmpfs"; then
+            mount -t devtmpfs devtmpfs /dev
+          fi
+          mount | grep " /dev "
       - name: Start udev daemon
         run: |
-          udevd --daemon 2>/dev/null || true
-          udevadm trigger 2>/dev/null || true
-          udevadm settle --timeout=10 2>/dev/null || true
+          set -x
+          udevd --daemon
+          udevadm control --reload-rules
+          udevadm trigger
+          udevadm settle --timeout=10
+          pgrep -a udevd
+      - name: Probe partition-node materialization
+        run: |
+          set -x
+          truncate -s 64M /tmp/probe.img
+          parted -s /tmp/probe.img -- mklabel gpt mkpart p1 1MiB 32MiB
+          DEV=$(losetup --find --show -P /tmp/probe.img)
+          echo "attached $DEV"
+          udevadm settle --timeout=5
+          ls -la "${DEV}"* || true
+          losetup -d "$DEV"
       - name: Verify installed entry point
         run: sprov --version
       - name: Run integration tests
